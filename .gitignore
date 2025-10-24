@@ -1,0 +1,147 @@
+# ===================================
+# VBG PLATFORM - GITIGNORE PRINCIPAL
+# ===================================
+
+# ------ OS & Editors ------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# ------ IDEs ------
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# ------ Logs ------
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# ------ Node.js (pour scripts workspace) ------
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# ------ Environnement ------
+.env
+.env.local
+.env.*.local
+.envrc
+
+# ------ Cache & Build ------
+dist/
+build/
+*.tgz
+*.tar.gz
+
+# ------ Docker ------
+.dockerignore
+
+# ------ Deployment ------
+.vercel/
+.netlify/
+
+# ------ Monitoring ------
+.nyc_output/
+coverage/
+
+# ===================================
+# BACKEND LARAVEL SPECIFIC
+# ===================================
+apps/api/vendor/
+apps/api/storage/app/public/*
+apps/api/storage/framework/cache/*
+apps/api/storage/framework/sessions/*
+apps/api/storage/framework/testing/*
+apps/api/storage/framework/views/*
+apps/api/storage/logs/*
+apps/api/bootstrap/cache/*
+apps/api/.env
+apps/api/.env.backup
+apps/api/.phpunit.result.cache
+apps/api/Homestead.json
+apps/api/Homestead.yaml
+apps/api/npm-debug.log
+apps/api/yarn-error.log
+apps/api/.php_cs.cache
+apps/api/.phpstorm.meta.php
+apps/api/_ide_helper.php
+apps/api/_ide_helper_models.php
+apps/api/public/storage
+
+# ===================================
+# FRONTEND REACT SPECIFIC
+# ===================================
+apps/web/node_modules/
+apps/web/dist/
+apps/web/.cache/
+apps/web/.parcel-cache/
+apps/web/.next/
+apps/web/out/
+apps/web/.nuxt/
+apps/web/.vuepress/dist/
+apps/web/.serverless/
+apps/web/.fusebox/
+apps/web/.dynamodb/
+apps/web/.tern-port
+apps/web/.env.local
+apps/web/.env.development.local
+apps/web/.env.test.local
+apps/web/.env.production.local
+apps/web/coverage/
+apps/web/.nyc_output/
+apps/web/storybook-static/
+
+# ===================================
+# FLUTTER MOBILE SPECIFIC
+# ===================================
+apps/mobile/.dart_tool/
+apps/mobile/.flutter-plugins
+apps/mobile/.flutter-plugins-dependencies
+apps/mobile/.packages
+apps/mobile/.pub-cache/
+apps/mobile/.pub/
+apps/mobile/build/
+apps/mobile/flutter_*.png
+apps/mobile/flutter_*.ipa
+apps/mobile/flutter_*.apk
+apps/mobile/*.jks
+apps/mobile/key.properties
+apps/mobile/.metadata
+apps/mobile/ios/Runner.xcworkspace/xcshareddata/
+apps/mobile/ios/Flutter/Generated.xcconfig
+apps/mobile/ios/Flutter/flutter_export_environment.sh
+apps/mobile/android/app/debug/
+apps/mobile/android/app/profile/
+apps/mobile/android/app/release/
+apps/mobile/android/key.properties
+apps/mobile/android/app/google-services.json
+apps/mobile/ios/Runner/GoogleService-Info.plist
+
+# ===================================
+# PACKAGES & SHARED
+# ===================================
+packages/*/node_modules/
+packages/*/dist/
+packages/*/build/
+packages/*/.env
+
+# ===================================
+# DOCS & ASSETS
+# ===================================
+*.pdf
+*.zip
+*.rar
+*.7z
+docs/build/

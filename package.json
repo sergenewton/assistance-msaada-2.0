@@ -1,0 +1,48 @@
+{
+  "name": "vbg-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Plateforme VBG - Monorepo avec Backend Laravel, Frontend React et Mobile Flutter",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "./scripts/dev.sh",
+    "build": "./scripts/build.sh",
+    "test": "./scripts/test.sh",
+    "lint": "./scripts/lint.sh",
+    "prepare": "husky install",
+    "commit": "git-cz",
+    "release": "standard-version"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^17.7.2",
+    "@commitlint/config-conventional": "^17.7.0",
+    "commitizen": "^4.3.0",
+    "cz-conventional-changelog": "^3.3.0",
+    "husky": "^8.0.3",
+    "lint-staged": "^14.0.1",
+    "standard-version": "^9.5.0"
+  },
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/cz-conventional-changelog"
+    }
+  },
+  "lint-staged": {
+    "apps/api/**/*.php": [
+      "cd apps/api && ./vendor/bin/pint"
+    ],
+    "apps/web/**/*.{js,ts,tsx}": [
+      "cd apps/web && npm run lint:fix"
+    ],
+    "apps/mobile/**/*.dart": [
+      "cd apps/mobile && dart format ."
+    ]
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  }
+}

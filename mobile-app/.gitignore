@@ -1,0 +1,106 @@
+# ===================================
+# FLUTTER MOBILE - GITIGNORE
+# ===================================
+
+# ------ Dart & Flutter ------
+# See https://dart.dev/guides/libraries/private-files
+
+# ------ Build & Cache ------
+**/build/
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.packages
+.metadata
+.pub/
+.pub-cache/
+
+# ------ Generated Files ------
+**/*.g.dart
+**/*.freezed.dart
+**/*.gr.dart
+**/*.config.dart
+
+# ------ IDE & OS ------
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+*.iml
+*.ipr
+*.iws
+
+# ------ Flutter Assets ------
+flutter_*.png
+flutter_*.ipa
+flutter_*.apk
+flutter_*.aab
+
+# ------ Android ------
+android/app/debug/
+android/app/profile/
+android/app/release/
+android/gradle.properties
+android/key.properties
+android/app/google-services.json
+android/app/src/debug/google-services.json
+android/app/src/profile/google-services.json
+android/app/src/release/google-services.json
+android/keystore.jks
+android/app/keystore.jks
+*.jks
+
+# ------ iOS ------
+ios/Runner.xcworkspace/xcshareddata/
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
+ios/Runner/GoogleService-Info.plist
+ios/firebase_app_id_file.json
+ios/Pods/
+ios/.symlinks/
+
+# ------ Environment & Secrets ------
+.env
+.env.local
+.env.production
+.env.development
+key.properties
+firebase_options.dart
+google-services.json
+GoogleService-Info.plist
+
+# ------ Logs ------
+*.log
+logs/
+
+# ------ Coverage ------
+coverage/
+lcov.info
+
+# ------ Web ------
+web/favicon.png
+web/icons/Icon-192.png
+web/icons/Icon-512.png
+web/manifest.json
+
+# ------ Testing ------
+test/.test_coverage.dart
+test_coverage/
+
+# ------ Firebase ------
+.firebase/
+firebase-debug.log
+firestore-debug.log
+
+# ------ Code Generation ------
+*.inject.summary
+*.inject.dart
+*.jvmargs
+
+# ------ Fastlane ------
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots
+fastlane/test_output

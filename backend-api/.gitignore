@@ -1,0 +1,67 @@
+# ===================================
+# LARAVEL BACKEND - GITIGNORE
+# ===================================
+
+# ------ Vendor & Dependencies ------
+/vendor/
+/node_modules/
+npm-debug.log
+yarn-error.log
+
+# ------ Environment ------
+.env
+.env.backup
+.env.production
+.phpunit.result.cache
+
+# ------ Storage ------
+/storage/*.key
+/storage/app/public/*
+!/storage/app/public/.gitkeep
+/storage/framework/cache/data/*
+!/storage/framework/cache/data/.gitkeep
+/storage/framework/sessions/*
+!/storage/framework/sessions/.gitkeep
+/storage/framework/testing/*
+!/storage/framework/testing/.gitkeep
+/storage/framework/views/*
+!/storage/framework/views/.gitkeep
+/storage/logs/*
+!/storage/logs/.gitkeep
+/storage/debugbar/
+
+# ------ Bootstrap Cache ------
+/bootstrap/cache/*
+!/bootstrap/cache/.gitkeep
+
+# ------ Public Storage ------
+/public/storage
+/public/hot
+
+# ------ IDE & OS ------
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# ------ Laravel Specific ------
+Homestead.json
+Homestead.yaml
+npm-debug.log
+yarn-error.log
+.php_cs.cache
+.phpstorm.meta.php
+_ide_helper.php
+_ide_helper_models.php
+
+# ------ Testing ------
+coverage/
+.phpunit.result.cache
+/tests/coverage/
+
+# ------ Deployment ------
+/.vagrant
+.rr.yaml
+
+# ------ Logs ------
+*.log
