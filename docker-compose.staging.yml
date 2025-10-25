@@ -1,0 +1,240 @@
+# ==========================================
+# DOCKER COMPOSE - STAGING ENVIRONMENT
+# ASSISTANCE MSAADA 2.0
+# ==========================================
+
+version: '3.8'
+
+networks:
+  assistance-msaada-staging:
+    driver: bridge
+
+volumes:
+  mysql_data_staging:
+  redis_data_staging:
+
+services:
+  # ========================================
+  # DATABASE - MySQL 8.0 (Staging)
+  # ========================================
+  mysql:
+    image: mysql:8.0
+    container_name: assistance-msaada-mysql-staging
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: assistance_msaada_staging
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "3307:3306"  # Different port to avoid conflicts
+    volumes:
+      - mysql_data_staging:/var/lib/mysql
+      - ./docker/mysql/staging.cnf:/etc/mysql/conf.d/custom.cnf
+    networks:
+      - assistance-msaada-staging
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  # ========================================
+  # REDIS - Cache & Sessions (Staging)
+  # ========================================
+  redis:
+    image: redis:7-alpine
+    container_name: assistance-msaada-redis-staging
+    restart: always
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data_staging:/data
+      - ./docker/redis/staging.conf:/usr/local/etc/redis/redis.conf
+    networks:
+      - assistance-msaada-staging
+    command: redis-server /usr/local/etc/redis/redis.conf
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ========================================
+  # BACKEND API - Laravel (Staging)
+  # ========================================
+  api:
+    build:
+      context: ./backend-api
+      dockerfile: Dockerfile.staging
+      args:
+        - APP_ENV=staging
+    container_name: assistance-msaada-api-staging
+    restart: always
+    environment:
+      - APP_ENV=staging
+      - DB_HOST=mysql
+      - DB_DATABASE=assistance_msaada_staging
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    volumes:
+      - ./backend-api/storage:/var/www/html/storage
+      - ./docker/php/staging.ini:/usr/local/etc/php/conf.d/custom.ini
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - assistance-msaada-staging
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ========================================
+  # FRONTEND WEB - React (Staging)
+  # ========================================
+  web:
+    build:
+      context: ./frontend-web
+      dockerfile: Dockerfile.staging
+      args:
+        - VITE_APP_ENV=staging
+        - VITE_API_BASE_URL=https://staging-api.assistance-msaada.org/api/v1
+    container_name: assistance-msaada-web-staging
+    restart: always
+    depends_on:
+      - api
+    networks:
+      - assistance-msaada-staging
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ========================================
+  # QUEUE WORKER - Laravel Queue (Staging)
+  # ========================================
+  queue:
+    build:
+      context: ./backend-api
+      dockerfile: Dockerfile.staging
+    container_name: assistance-msaada-queue-staging
+    restart: always
+    environment:
+      - APP_ENV=staging
+      - DB_HOST=mysql
+      - DB_DATABASE=assistance_msaada_staging
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - REDIS_HOST=redis
+      - QUEUE_CONNECTION=redis
+    volumes:
+      - ./backend-api/storage:/var/www/html/storage
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - assistance-msaada-staging
+    command: php artisan queue:work --verbose --tries=3 --timeout=60
+    healthcheck:
+      test: ["CMD", "php", "artisan", "queue:monitor"]
+      interval: 60s
+      timeout: 30s
+      retries: 3
+
+  # ========================================
+  # CRON SCHEDULER - Laravel Schedule (Staging)
+  # ========================================
+  scheduler:
+    build:
+      context: ./backend-api
+      dockerfile: Dockerfile.staging
+    container_name: assistance-msaada-scheduler-staging
+    restart: always
+    environment:
+      - APP_ENV=staging
+      - DB_HOST=mysql
+      - DB_DATABASE=assistance_msaada_staging
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - REDIS_HOST=redis
+    volumes:
+      - ./backend-api/storage:/var/www/html/storage
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - assistance-msaada-staging
+    command: sh -c "while true; do php artisan schedule:run; sleep 60; done"
+
+  # ========================================
+  # REVERSE PROXY - Nginx (Staging)
+  # ========================================
+  nginx:
+    image: nginx:alpine
+    container_name: assistance-msaada-nginx-staging
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/staging.conf:/etc/nginx/conf.d/default.conf
+      - ./docker/ssl/staging:/etc/nginx/ssl
+      - /var/log/nginx:/var/log/nginx
+    depends_on:
+      - api
+      - web
+    networks:
+      - assistance-msaada-staging
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ========================================
+  # MONITORING - Prometheus (Optional)
+  # ========================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: assistance-msaada-prometheus-staging
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/prometheus/staging.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - assistance-msaada-staging
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+
+  # ========================================
+  # MONITORING - Grafana (Optional)
+  # ========================================
+  grafana:
+    image: grafana/grafana:latest
+    container_name: assistance-msaada-grafana-staging
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+    ports:
+      - "3001:3000"
+    volumes:
+      - ./docker/grafana/staging:/etc/grafana/provisioning
+    depends_on:
+      - prometheus
+    networks:
+      - assistance-msaada-staging

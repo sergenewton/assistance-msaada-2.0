@@ -271,21 +271,59 @@ jobs:
     needs: [build]
     if: github.ref == 'refs/heads/develop'
     
-    environment: staging
+    environment: 
+      name: staging
+      url: https://staging.assistance-msaada.org
     
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
         
-      - name: 🚀 Deploy to Staging
+      - name: � Setup environment variables
+        run: |
+          echo "Setting up staging environment variables..."
+          echo "ENVIRONMENT=staging" >> $GITHUB_ENV
+          echo "API_URL=https://staging-api.assistance-msaada.org" >> $GITHUB_ENV
+          echo "WEB_URL=https://staging.assistance-msaada.org" >> $GITHUB_ENV
+        
+      - name: 🐳 Build and deploy Docker containers
+        env:
+          DB_PASSWORD: ${{ secrets.STAGING_DB_PASSWORD }}
+          JWT_SECRET: ${{ secrets.STAGING_JWT_SECRET }}
+          PUSHER_APP_KEY: ${{ secrets.STAGING_PUSHER_APP_KEY }}
+          PUSHER_APP_SECRET: ${{ secrets.STAGING_PUSHER_APP_SECRET }}
         run: |
           echo "🚧 Deploying to staging environment..."
-          # Add your staging deployment commands here
+          # Copy staging environment files
+          cp backend-api/.env.staging backend-api/.env
+          cp frontend-web/.env.staging frontend-web/.env
+          
+          # Build and deploy using docker-compose
+          docker-compose -f docker-compose.staging.yml down
+          docker-compose -f docker-compose.staging.yml build
+          docker-compose -f docker-compose.staging.yml up -d
+          
+          # Run database migrations
+          docker-compose -f docker-compose.staging.yml exec -T api php artisan migrate --force
+          
+      - name: 🧪 Run post-deployment tests
+        run: |
+          echo "Running staging health checks..."
+          sleep 30  # Wait for services to start
+          curl -f https://staging-api.assistance-msaada.org/health
+          
+      - name: 📊 Update deployment metrics
+        run: |
+          echo "📈 Recording deployment metrics..."
+          curl -X POST "${{ secrets.DEPLOYMENT_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d '{"environment": "staging", "status": "success", "commit": "${{ github.sha }}"}'
           
       - name: 🔗 Update deployment status
         run: |
           echo "✅ Staging deployment completed"
-          echo "🌐 Staging URL: https://staging.vbg-platform.com"
+          echo "🌐 Staging URL: https://staging.assistance-msaada.org"
+          echo "🔧 API URL: https://staging-api.assistance-msaada.org"
 
   # ===================================
   # DEPLOY PRODUCTION
@@ -296,26 +334,146 @@ jobs:
     needs: [build]
     if: github.ref == 'refs/heads/main'
     
-    environment: production
+    environment: 
+      name: production
+      url: https://assistance-msaada.org
     
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
         
+      - name: 🔒 Security pre-deployment checks
+        run: |
+          echo "🔒 Running security checks..."
+          # Check for secrets in environment files
+          if grep -r "password\|secret\|key" --include="*.env*" .; then
+            echo "⚠️ Warning: Potential secrets found in environment files"
+          fi
+        
+      - name: 🔧 Setup environment variables
+        run: |
+          echo "Setting up production environment variables..."
+          echo "ENVIRONMENT=production" >> $GITHUB_ENV
+          echo "API_URL=https://api.assistance-msaada.org" >> $GITHUB_ENV
+          echo "WEB_URL=https://assistance-msaada.org" >> $GITHUB_ENV
+        
+      - name: 🔐 Decrypt production secrets
+        env:
+          PRODUCTION_SECRETS_PASSPHRASE: ${{ secrets.PRODUCTION_SECRETS_PASSPHRASE }}
+        run: |
+          echo "🔐 Decrypting production secrets..."
+          # Decrypt sensitive configuration files
+          gpg --quiet --batch --yes --decrypt --passphrase="$PRODUCTION_SECRETS_PASSPHRASE" \
+            --output backend-api/.env backend-api/.env.production.gpg
+          gpg --quiet --batch --yes --decrypt --passphrase="$PRODUCTION_SECRETS_PASSPHRASE" \
+            --output frontend-web/.env frontend-web/.env.production.gpg
+        
+      - name: 🐳 Build production Docker images
+        env:
+          DOCKER_REGISTRY: ${{ secrets.DOCKER_REGISTRY }}
+        run: |
+          echo "🏗️ Building production Docker images..."
+          
+          # Login to container registry
+          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+          
+          # Build and tag images
+          docker build -f backend-api/Dockerfile.production -t $DOCKER_REGISTRY/assistance-msaada/api:latest backend-api/
+          docker build -f frontend-web/Dockerfile.production -t $DOCKER_REGISTRY/assistance-msaada/web:latest frontend-web/
+          
+          # Push images to registry
+          docker push $DOCKER_REGISTRY/assistance-msaada/api:latest
+          docker push $DOCKER_REGISTRY/assistance-msaada/web:latest
+        
       - name: 🚀 Deploy to Production
+        env:
+          PRODUCTION_SERVER: ${{ secrets.PRODUCTION_SERVER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
           echo "🚀 Deploying to production environment..."
-          # Add your production deployment commands here
           
-      - name: 🔗 Update deployment status
+          # Setup SSH
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "$PRODUCTION_SERVER" >> ~/.ssh/known_hosts
+          
+          # Deploy using SSH
+          ssh deploy@"$PRODUCTION_SERVER" << 'EOF'
+            cd /opt/assistance-msaada
+            
+            # Pull latest images
+            docker-compose -f docker-compose.production.yml pull
+            
+            # Backup database before deployment
+            docker-compose -f docker-compose.production.yml exec mysql \
+              mysqldump -u root -p assistance_msaada_production > /backups/pre-deploy-$(date +%Y%m%d-%H%M%S).sql
+            
+            # Rolling deployment
+            docker-compose -f docker-compose.production.yml up -d --no-deps api web
+            
+            # Run migrations
+            docker-compose -f docker-compose.production.yml exec api php artisan migrate --force
+            
+            # Clear caches
+            docker-compose -f docker-compose.production.yml exec api php artisan config:cache
+            docker-compose -f docker-compose.production.yml exec api php artisan route:cache
+            docker-compose -f docker-compose.production.yml exec api php artisan view:cache
+            
+            # Restart queue workers
+            docker-compose -f docker-compose.production.yml restart queue-critical queue-default
+          EOF
+          
+      - name: 🧪 Run production health checks
         run: |
-          echo "✅ Production deployment completed"
-          echo "🌐 Production URL: https://vbg-platform.com"
+          echo "🩺 Running production health checks..."
+          sleep 60  # Wait for deployment to stabilize
           
-      - name: 📢 Notify deployment
+          # Health check endpoints
+          curl -f https://api.assistance-msaada.org/health
+          curl -f https://assistance-msaada.org/health
+          
+          # Check SSL certificates
+          echo | openssl s_client -connect assistance-msaada.org:443 2>/dev/null | openssl x509 -noout -dates
+          
+      - name: 📊 Update deployment metrics
+        if: success()
+        run: |
+          echo "📈 Recording successful production deployment..."
+          curl -X POST "${{ secrets.DEPLOYMENT_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d '{"environment": "production", "status": "success", "commit": "${{ github.sha }}", "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"}'
+          
+      - name: 📢 Notify deployment success
+        if: success()
         uses: 8398a7/action-slack@v3
-        if: always()
         with:
-          status: ${{ job.status }}
+          status: success
           webhook_url: ${{ secrets.SLACK_WEBHOOK }}
-          text: "🚀 VBG Platform deployed to production"
+          text: "🚀 Assistance Msaada deployed to production successfully!\n🌐 URL: https://assistance-msaada.org\n📝 Commit: ${{ github.sha }}"
+          
+      - name: 🚨 Handle deployment failure
+        if: failure()
+        run: |
+          echo "🚨 Production deployment failed!"
+          
+          # Rollback if possible
+          ssh deploy@"${{ secrets.PRODUCTION_SERVER }}" << 'EOF'
+            cd /opt/assistance-msaada
+            echo "Rolling back to previous version..."
+            docker-compose -f docker-compose.production.yml down
+            docker-compose -f docker-compose.production.yml up -d
+          EOF
+          
+          # Notify failure
+          curl -X POST "${{ secrets.DEPLOYMENT_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d '{"environment": "production", "status": "failed", "commit": "${{ github.sha }}"}'
+          
+      - name: 📢 Notify deployment failure
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+          text: "� Assistance Msaada production deployment FAILED!\n📝 Commit: ${{ github.sha }}\n🔗 Logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

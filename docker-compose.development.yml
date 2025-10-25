@@ -1,0 +1,229 @@
+# ==========================================
+# DOCKER COMPOSE - DEVELOPMENT ENVIRONMENT
+# ASSISTANCE MSAADA 2.0
+# ==========================================
+
+version: '3.8'
+
+networks:
+  assistance-msaada-dev:
+    driver: bridge
+
+volumes:
+  mysql_data:
+  redis_data:
+  minio_data:
+
+services:
+  # ========================================
+  # DATABASE - MySQL 8.0
+  # ========================================
+  mysql:
+    image: mysql:8.0
+    container_name: assistance-msaada-mysql-dev
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: assistance_msaada_dev
+      MYSQL_USER: msaada_user
+      MYSQL_PASSWORD: msaada_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/schema/assistance_msaada_schema.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - assistance-msaada-dev
+    command: --default-authentication-plugin=mysql_native_password
+
+  # ========================================
+  # REDIS - Cache & Sessions
+  # ========================================
+  redis:
+    image: redis:7-alpine
+    container_name: assistance-msaada-redis-dev
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - assistance-msaada-dev
+    command: redis-server --appendonly yes
+
+  # ========================================
+  # MinIO - S3 Compatible Storage (Development)
+  # ========================================
+  minio:
+    image: minio/minio:latest
+    container_name: assistance-msaada-minio-dev
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio123
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - assistance-msaada-dev
+    command: server /data --console-address ":9001"
+
+  # ========================================
+  # MAILHOG - Email Testing
+  # ========================================
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: assistance-msaada-mailhog-dev
+    restart: unless-stopped
+    ports:
+      - "1025:1025"  # SMTP
+      - "8025:8025"  # Web UI
+    networks:
+      - assistance-msaada-dev
+
+  # ========================================
+  # LARAVEL ECHO SERVER - WebSocket
+  # ========================================
+  echo-server:
+    image: oanhnn/laravel-echo-server:latest
+    container_name: assistance-msaada-echo-dev
+    restart: unless-stopped
+    environment:
+      ECHO_DEVMODE: "true"
+      ECHO_DEBUG: "true"
+      ECHO_PORT: 6001
+      ECHO_REDIS_HOST: redis
+      ECHO_REDIS_PORT: 6379
+    ports:
+      - "6001:6001"
+    depends_on:
+      - redis
+    networks:
+      - assistance-msaada-dev
+    volumes:
+      - ./echo-server.json:/app/laravel-echo-server.json
+
+  # ========================================
+  # BACKEND API - Laravel
+  # ========================================
+  api:
+    build:
+      context: ./backend-api
+      dockerfile: Dockerfile.dev
+    container_name: assistance-msaada-api-dev
+    restart: unless-stopped
+    environment:
+      - APP_ENV=development
+      - DB_HOST=mysql
+      - DB_DATABASE=assistance_msaada_dev
+      - DB_USERNAME=msaada_user
+      - DB_PASSWORD=msaada_password
+      - REDIS_HOST=redis
+      - MAIL_HOST=mailhog
+      - AWS_ENDPOINT=http://minio:9000
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend-api:/var/www/html
+      - ./backend-api/storage:/var/www/html/storage
+    depends_on:
+      - mysql
+      - redis
+      - minio
+      - mailhog
+    networks:
+      - assistance-msaada-dev
+    command: php artisan serve --host=0.0.0.0 --port=8000
+
+  # ========================================
+  # FRONTEND WEB - React + Vite
+  # ========================================
+  web:
+    build:
+      context: ./frontend-web
+      dockerfile: Dockerfile.dev
+    container_name: assistance-msaada-web-dev
+    restart: unless-stopped
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8000/api/v1
+      - VITE_WEBSOCKET_URL=ws://localhost:6001
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend-web:/app
+      - /app/node_modules
+    depends_on:
+      - api
+    networks:
+      - assistance-msaada-dev
+    command: npm run dev
+
+  # ========================================
+  # QUEUE WORKER - Laravel Queue
+  # ========================================
+  queue:
+    build:
+      context: ./backend-api
+      dockerfile: Dockerfile.dev
+    container_name: assistance-msaada-queue-dev
+    restart: unless-stopped
+    environment:
+      - APP_ENV=development
+      - DB_HOST=mysql
+      - DB_DATABASE=assistance_msaada_dev
+      - DB_USERNAME=msaada_user
+      - DB_PASSWORD=msaada_password
+      - REDIS_HOST=redis
+      - QUEUE_CONNECTION=redis
+    volumes:
+      - ./backend-api:/var/www/html
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      - assistance-msaada-dev
+    command: php artisan queue:work --verbose --tries=3
+
+  # ========================================
+  # CRON SCHEDULER - Laravel Schedule
+  # ========================================
+  scheduler:
+    build:
+      context: ./backend-api
+      dockerfile: Dockerfile.dev
+    container_name: assistance-msaada-scheduler-dev
+    restart: unless-stopped
+    environment:
+      - APP_ENV=development
+      - DB_HOST=mysql
+      - DB_DATABASE=assistance_msaada_dev
+      - DB_USERNAME=msaada_user
+      - DB_PASSWORD=msaada_password
+      - REDIS_HOST=redis
+    volumes:
+      - ./backend-api:/var/www/html
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      - assistance-msaada-dev
+    command: crond -f
+
+  # ========================================
+  # REVERSE PROXY - Nginx
+  # ========================================
+  nginx:
+    image: nginx:alpine
+    container_name: assistance-msaada-nginx-dev
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./docker/nginx/dev.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - api
+      - web
+    networks:
+      - assistance-msaada-dev
