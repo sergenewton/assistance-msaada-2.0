@@ -1,0 +1,261 @@
+groups:
+  # =============================================================================
+  # ALERTES INFRASTRUCTURE CRITIQUE - ASSISTANCE MSAADA 2.0
+  # =============================================================================
+  
+  # Alertes système niveau critique
+  - name: system.critical
+    rules:
+      - alert: InstanceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: infrastructure
+        annotations:
+          summary: "Instance {{ $labels.instance }} est hors ligne"
+          description: "L'instance {{ $labels.instance }} du job {{ $labels.job }} est inaccessible depuis plus d'1 minute."
+
+      - alert: HighMemoryUsage
+        expr: (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 < 10
+        for: 5m
+        labels:
+          severity: critical
+          service: system
+        annotations:
+          summary: "Utilisation mémoire critique sur {{ $labels.instance }}"
+          description: "Mémoire disponible: {{ $value }}% sur {{ $labels.instance }}"
+
+      - alert: HighDiskUsage
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 10
+        for: 5m
+        labels:
+          severity: critical
+          service: system
+        annotations:
+          summary: "Espace disque critique sur {{ $labels.instance }}"
+          description: "Espace disque disponible: {{ $value }}% sur {{ $labels.instance }}"
+
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 90
+        for: 10m
+        labels:
+          severity: warning
+          service: system
+        annotations:
+          summary: "Utilisation CPU élevée sur {{ $labels.instance }}"
+          description: "CPU utilisé à {{ $value }}% sur {{ $labels.instance }} depuis 10 minutes"
+
+  # Alertes base de données MySQL
+  - name: mysql.alerts
+    rules:
+      - alert: MySQLDown
+        expr: mysql_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: database
+        annotations:
+          summary: "MySQL est inaccessible"
+          description: "La base de données MySQL sur {{ $labels.instance }} est inaccessible"
+
+      - alert: MySQLSlowQueries
+        expr: rate(mysql_global_status_slow_queries[5m]) > 5
+        for: 5m
+        labels:
+          severity: warning
+          service: database
+        annotations:
+          summary: "Requêtes MySQL lentes détectées"
+          description: "{{ $value }} requêtes lentes par seconde sur {{ $labels.instance }}"
+
+      - alert: MySQLReplicationLag
+        expr: mysql_slave_lag_seconds > 30
+        for: 2m
+        labels:
+          severity: critical
+          service: database
+        annotations:
+          summary: "Retard de réplication MySQL"
+          description: "Réplication en retard de {{ $value }} secondes sur {{ $labels.instance }}"
+
+      - alert: MySQLConnections
+        expr: mysql_global_status_threads_connected / mysql_global_variables_max_connections * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: database
+        annotations:
+          summary: "Trop de connexions MySQL"
+          description: "{{ $value }}% des connexions MySQL utilisées sur {{ $labels.instance }}"
+
+  # Alertes Redis
+  - name: redis.alerts
+    rules:
+      - alert: RedisDown
+        expr: redis_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: cache
+        annotations:
+          summary: "Redis est inaccessible"
+          description: "Redis sur {{ $labels.instance }} est inaccessible"
+
+      - alert: RedisMemoryHigh
+        expr: redis_memory_used_bytes / redis_memory_max_bytes * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+          service: cache
+        annotations:
+          summary: "Utilisation mémoire Redis élevée"
+          description: "Redis utilise {{ $value }}% de sa mémoire sur {{ $labels.instance }}"
+
+  # Alertes application Laravel
+  - name: laravel.alerts
+    rules:
+      - alert: LaravelAppDown
+        expr: up{job="backend-laravel"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: application
+        annotations:
+          summary: "Application Laravel inaccessible"
+          description: "L'application Laravel sur {{ $labels.instance }} est inaccessible"
+
+      - alert: LaravelHighResponseTime
+        expr: histogram_quantile(0.95, rate(laravel_request_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+          service: application
+        annotations:
+          summary: "Temps de réponse Laravel élevé"
+          description: "95% des requêtes prennent plus de {{ $value }}s sur {{ $labels.instance }}"
+
+      - alert: LaravelHighErrorRate
+        expr: rate(laravel_requests_total{status=~"5.."}[5m]) / rate(laravel_requests_total[5m]) * 100 > 5
+        for: 3m
+        labels:
+          severity: critical
+          service: application
+        annotations:
+          summary: "Taux d'erreur Laravel élevé"
+          description: "{{ $value }}% d'erreurs 5xx sur {{ $labels.instance }}"
+
+      - alert: LaravelQueueBacklog
+        expr: laravel_queue_size > 100
+        for: 10m
+        labels:
+          severity: warning
+          service: queue
+        annotations:
+          summary: "File d'attente Laravel surchargée"
+          description: "{{ $value }} jobs en attente dans la queue {{ $labels.queue }}"
+
+  # Alertes spécifiques VBG (Violence Basée sur le Genre)
+  - name: vbg.security
+    rules:
+      - alert: VBGFailedLogins
+        expr: increase(laravel_failed_logins_total[15m]) > 10
+        for: 0m
+        labels:
+          severity: warning
+          service: security
+          category: vbg
+        annotations:
+          summary: "Tentatives de connexion suspectes détectées"
+          description: "{{ $value }} tentatives de connexion échouées en 15 minutes"
+
+      - alert: VBGDataAccessAnomaly
+        expr: increase(laravel_vbg_data_access_total[1h]) > 1000
+        for: 0m
+        labels:
+          severity: critical
+          service: security
+          category: vbg
+        annotations:
+          summary: "Accès anormal aux données sensibles VBG"
+          description: "{{ $value }} accès aux données VBG en 1 heure - investigation requise"
+
+      - alert: VBGReportSubmissionSpike
+        expr: increase(laravel_vbg_reports_total[10m]) > 50
+        for: 0m
+        labels:
+          severity: warning
+          service: business
+          category: vbg
+        annotations:
+          summary: "Pic de signalements VBG détecté"
+          description: "{{ $value }} nouveaux signalements en 10 minutes - vérifier si incident de masse"
+
+  # Alertes SSL/HTTPS
+  - name: ssl.certificates
+    rules:
+      - alert: SSLCertificateExpiry
+        expr: (probe_ssl_earliest_cert_expiry - time()) / 86400 < 30
+        for: 1h
+        labels:
+          severity: warning
+          service: security
+        annotations:
+          summary: "Certificat SSL expire bientôt"
+          description: "Le certificat SSL de {{ $labels.instance }} expire dans {{ $value }} jours"
+
+      - alert: SSLCertificateExpired
+        expr: probe_ssl_earliest_cert_expiry - time() <= 0
+        for: 0m
+        labels:
+          severity: critical
+          service: security
+        annotations:
+          summary: "Certificat SSL expiré"
+          description: "Le certificat SSL de {{ $labels.instance }} a expiré"
+
+  # Alertes Traefik Load Balancer
+  - name: traefik.loadbalancer
+    rules:
+      - alert: TraefikDown
+        expr: up{job="traefik"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: loadbalancer
+        annotations:
+          summary: "Traefik Load Balancer inaccessible"
+          description: "Le load balancer Traefik est inaccessible"
+
+      - alert: TraefikHighLatency
+        expr: histogram_quantile(0.99, rate(traefik_request_duration_seconds_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+          service: loadbalancer
+        annotations:
+          summary: "Latence Traefik élevée"
+          description: "99% des requêtes Traefik prennent plus d'1 seconde"
+
+  # Alertes monitoring lui-même
+  - name: monitoring.health
+    rules:
+      - alert: PrometheusConfigReloadFailed
+        expr: prometheus_config_last_reload_successful == 0
+        for: 1m
+        labels:
+          severity: warning
+          service: monitoring
+        annotations:
+          summary: "Échec du rechargement de configuration Prometheus"
+          description: "Prometheus n'a pas pu recharger sa configuration"
+
+      - alert: GrafanaDown
+        expr: up{job="grafana"} == 0
+        for: 5m
+        labels:
+          severity: warning
+          service: monitoring
+        annotations:
+          summary: "Grafana inaccessible"
+          description: "Le dashboard Grafana est inaccessible"

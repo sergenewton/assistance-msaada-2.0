@@ -1,0 +1,316 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Assistance Msaada - Monitoring VBG Platform",
+    "tags": ["vbg", "assistance-msaada", "security", "privacy"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "🚨 Alertes de Sécurité VBG",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "increase(vbg_security_violations_total[5m])",
+            "refId": "A",
+            "legendFormat": "Violations Sécurité"
+          },
+          {
+            "expr": "increase(vbg_unauthorized_access_attempts_total[5m])",
+            "refId": "B",
+            "legendFormat": "Tentatives Accès Non Autorisé"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "yellow", "value": 1},
+                {"color": "red", "value": 3}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "📊 Performance Endpoints VBG",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total{job=\"laravel-backend\",endpoint=~\".*reports.*\"}[5m])",
+            "refId": "A",
+            "legendFormat": "Rapports VBG"
+          },
+          {
+            "expr": "rate(http_requests_total{job=\"laravel-backend\",endpoint=~\".*victims.*\"}[5m])",
+            "refId": "B",
+            "legendFormat": "Gestion Victimes"
+          },
+          {
+            "expr": "rate(http_requests_total{job=\"laravel-backend\",endpoint=~\".*emergency.*\"}[5m])",
+            "refId": "C",
+            "legendFormat": "Urgences"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+      },
+      {
+        "id": 3,
+        "title": "🔐 Authentification & Autorisation",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "rate(auth_login_attempts_total[5m])",
+            "refId": "A",
+            "legendFormat": "Tentatives Connexion"
+          },
+          {
+            "expr": "rate(auth_login_failures_total[5m])",
+            "refId": "B",
+            "legendFormat": "Échecs Connexion"
+          },
+          {
+            "expr": "rate(auth_password_reset_requests_total[5m])",
+            "refId": "C",
+            "legendFormat": "Demandes Reset Mot de Passe"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+      },
+      {
+        "id": 4,
+        "title": "💾 État Base de Données VBG",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "mysql_up",
+            "refId": "A",
+            "legendFormat": "MySQL Status"
+          },
+          {
+            "expr": "mysql_global_status_threads_connected",
+            "refId": "B", 
+            "legendFormat": "Connexions Actives"
+          },
+          {
+            "expr": "mysql_global_status_slow_queries",
+            "refId": "C",
+            "legendFormat": "Requêtes Lentes"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "yellow", "value": 50},
+                {"color": "red", "value": 100}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+      },
+      {
+        "id": 5,
+        "title": "🏥 Santé des Services",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "up{job=\"laravel-backend\"}",
+            "refId": "A",
+            "legendFormat": "Backend Laravel"
+          },
+          {
+            "expr": "up{job=\"react-frontend\"}",
+            "refId": "B",
+            "legendFormat": "Frontend React"
+          },
+          {
+            "expr": "up{job=\"redis\"}",
+            "refId": "C",
+            "legendFormat": "Redis Cache"
+          },
+          {
+            "expr": "up{job=\"nginx\"}",
+            "refId": "D",
+            "legendFormat": "Nginx Proxy"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 16}
+      },
+      {
+        "id": 6,
+        "title": "📈 Métriques Applicatives VBG",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "increase(vbg_reports_created_total[1h])",
+            "refId": "A",
+            "legendFormat": "Nouveaux Rapports VBG"
+          },
+          {
+            "expr": "increase(vbg_victims_registered_total[1h])",
+            "refId": "B",
+            "legendFormat": "Nouvelles Victimes Enregistrées"
+          },
+          {
+            "expr": "increase(vbg_emergency_calls_total[1h])", 
+            "refId": "C",
+            "legendFormat": "Appels d'Urgence"
+          },
+          {
+            "expr": "increase(vbg_support_sessions_total[1h])",
+            "refId": "D",
+            "legendFormat": "Sessions de Support"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24}
+      },
+      {
+        "id": 7,
+        "title": "🔍 Logs d'Erreur Critiques",
+        "type": "logs",
+        "targets": [
+          {
+            "expr": "{job=\"laravel-backend\"} |= \"ERROR\" |= \"VBG\"",
+            "refId": "A"
+          },
+          {
+            "expr": "{job=\"react-frontend\"} |= \"ERROR\" |= \"sensitive\"",
+            "refId": "B"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24}
+      },
+      {
+        "id": 8,
+        "title": "🌍 Géolocalisation des Connexions (Anonymisée)",
+        "type": "geomap",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total{job=\"laravel-backend\"}[5m]) by (country_code)",
+            "refId": "A",
+            "legendFormat": "Connexions par Pays"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 32}
+      },
+      {
+        "id": 9,
+        "title": "📱 Métriques Dispositifs & Navigateurs",
+        "type": "piechart",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total{job=\"laravel-backend\"}[5m]) by (user_agent_type)",
+            "refId": "A",
+            "legendFormat": "{{user_agent_type}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 32}
+      },
+      {
+        "id": 10,
+        "title": "⚡ Performance Temps de Réponse",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job=\"laravel-backend\",endpoint=~\".*reports.*\"}[5m]))",
+            "refId": "A",
+            "legendFormat": "P95 Rapports VBG"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job=\"laravel-backend\",endpoint=~\".*victims.*\"}[5m]))",
+            "refId": "B", 
+            "legendFormat": "P95 Victimes"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job=\"laravel-backend\",endpoint=~\".*emergency.*\"}[5m]))",
+            "refId": "C",
+            "legendFormat": "P95 Urgences"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "min": 0,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "yellow", "value": 1},
+                {"color": "red", "value": 3}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 40}
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "30s",
+    "annotations": {
+      "list": [
+        {
+          "name": "Déploiements",
+          "datasource": "Prometheus",
+          "enable": true,
+          "expr": "changes(up{job=\"laravel-backend\"}[5m])",
+          "iconColor": "blue",
+          "titleFormat": "Déploiement détecté"
+        },
+        {
+          "name": "Incidents VBG",
+          "datasource": "Prometheus", 
+          "enable": true,
+          "expr": "increase(vbg_security_violations_total[1m]) > 0",
+          "iconColor": "red",
+          "titleFormat": "Incident de sécurité VBG"
+        }
+      ]
+    },
+    "templating": {
+      "list": [
+        {
+          "name": "environment",
+          "type": "custom",
+          "options": [
+            {"text": "Production", "value": "production"},
+            {"text": "Staging", "value": "staging"},
+            {"text": "Development", "value": "development"}
+          ],
+          "current": {
+            "text": "Production",
+            "value": "production"
+          }
+        },
+        {
+          "name": "organization",
+          "type": "query",
+          "datasource": "Prometheus",
+          "query": "label_values(vbg_reports_total, organization)",
+          "current": {
+            "text": "All",
+            "value": "$__all"
+          },
+          "includeAll": true
+        }
+      ]
+    }
+  },
+  "overwrite": true
+}

@@ -1,71 +1,37 @@
-# ==========================================
-# DOCKERFILE DEVELOPMENT - LARAVEL BACKEND
-# ASSISTANCE MSAADA 2.0
-# ==========================================
-
-FROM php:8.1-fpm-alpine
+# Simple Laravel Development Dockerfile
+FROM php:8.2-cli
 
 # Set working directory
 WORKDIR /var/www/html
 
-# Install system dependencies
-RUN apk add --no-cache \
+# Install basic system dependencies
+RUN apt-get update && apt-get install -y \
     git \
     curl \
-    libpng-dev \
-    libonig-dev \
-    libxml2-dev \
     zip \
     unzip \
-    mariadb-client \
-    nodejs \
-    npm
+    && rm -rf /var/lib/apt/lists/*
 
 # Install PHP extensions
-RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
+RUN docker-php-ext-install pdo_mysql
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Install Redis extension
-RUN apk add --no-cache pcre-dev $PHPIZE_DEPS \
-    && pecl install redis \
-    && docker-php-ext-enable redis
-
-# Copy composer files
-COPY composer.json composer.lock ./
-
-# Install PHP dependencies
-RUN composer install --no-dev --optimize-autoloader
-
-# Copy application code
+# Copy application files
 COPY . .
 
-# Create storage and bootstrap/cache directories
-RUN mkdir -p storage/logs storage/framework/{sessions,views,cache} \
-    && mkdir -p bootstrap/cache
+# Create required directories
+RUN mkdir -p storage/logs storage/framework/{sessions,views,cache} bootstrap/cache
 
 # Set permissions
-RUN chown -R www-data:www-data /var/www/html \
-    && chmod -R 755 /var/www/html \
-    && chmod -R 775 storage bootstrap/cache
+RUN chmod -R 777 storage bootstrap/cache
 
-# Copy environment file
-COPY .env.development .env
+# Install dependencies if composer.json exists
+RUN if [ -f composer.json ]; then composer install --no-interaction --no-dev; fi
 
-# Generate application key (for development)
-RUN php artisan key:generate
-
-# Install development tools
-RUN composer require --dev barryvdh/laravel-debugbar
-RUN composer require --dev laravel/telescope
-
-# Expose port 8000
+# Expose port
 EXPOSE 8000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
-
-# Start development server
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+# Simple startup command
+CMD ["php", "-S", "0.0.0.0:8000", "-t", "public"]

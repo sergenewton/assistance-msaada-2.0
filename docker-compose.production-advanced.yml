@@ -1,0 +1,493 @@
+# =============================================================================
+# DOCKER COMPOSE PRODUCTION - ASSISTANCE MSAADA 2.0
+# Configuration serveur production haute disponibilité avec monitoring
+# =============================================================================
+
+services:
+  # =============================================================================
+  # REVERSE PROXY & LOAD BALANCER (HA)
+  # =============================================================================
+  traefik-1:
+    image: traefik:v3.0
+    container_name: msaada-traefik-prod-1
+    restart: unless-stopped
+    command:
+      - --api.dashboard=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.letsencrypt.acme.tlschallenge=true
+      - --certificatesresolvers.letsencrypt.acme.email=devops@assistance-msaada.org
+      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+      - --metrics.prometheus=true
+      - --metrics.prometheus.addEntryPointsLabels=true
+      - --metrics.prometheus.addServicesLabels=true
+      - --log.level=WARN
+      - --accesslog=true
+      - --providers.consul.endpoints=consul:8500
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_letsencrypt:/letsencrypt
+      - ./config/traefik/production:/etc/traefik:ro
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.traefik.rule=Host(`traefik.assistance-msaada.org`)
+      - traefik.http.routers.traefik.tls.certresolver=letsencrypt
+      - traefik.http.services.traefik.loadbalancer.server.port=8080
+      - traefik.http.middlewares.traefik-auth.basicauth.users=admin:$$2y$$10$$secure.hash.password
+      - traefik.http.routers.traefik.middlewares=traefik-auth
+    networks:
+      - msaada-network-prod
+    environment:
+      - TRAEFIK_API_DASHBOARD=true
+      - TRAEFIK_API_INSECURE=false
+
+  # =============================================================================
+  # BACKEND LARAVEL (CLUSTER 4 INSTANCES)
+  # =============================================================================
+  backend-prod-1:
+    image: sergenewton/assistance-msaada-backend:production
+    container_name: msaada-backend-prod-1
+    restart: unless-stopped
+    build:
+      context: ../backend-api
+      dockerfile: Dockerfile.production
+      target: production
+    env_file:
+      - ../backend-api/.env.production
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - DB_HOST=db-prod-master
+      - DB_READ_HOST=db-prod-replica
+      - REDIS_HOST=redis-prod-master
+      - SENTRY_DSN=${SENTRY_DSN_BACKEND_PROD}
+      - SENTRY_ENVIRONMENT=production
+    volumes:
+      - backend_storage_prod:/var/www/html/storage
+      - backend_logs_prod:/var/www/html/storage/logs
+    depends_on:
+      db-prod-master:
+        condition: service_healthy
+      redis-prod-master:
+        condition: service_healthy
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.backend-prod.rule=Host(`api.assistance-msaada.org`)
+      - traefik.http.routers.backend-prod.tls.certresolver=letsencrypt
+      - traefik.http.services.backend-prod.loadbalancer.server.port=8000
+      - traefik.http.services.backend-prod.loadbalancer.healthcheck.path=/health
+      - traefik.http.services.backend-prod.loadbalancer.healthcheck.interval=30s
+      - traefik.http.middlewares.backend-cors.headers.accesscontrolallowmethods=GET,OPTIONS,PUT,POST,DELETE,PATCH
+      - traefik.http.middlewares.backend-cors.headers.accesscontrolallowheaders=*
+      - traefik.http.middlewares.backend-cors.headers.accesscontrolalloworiginlist=https://assistance-msaada.org
+      - traefik.http.middlewares.backend-ratelimit.ratelimit.average=100
+      - traefik.http.middlewares.backend-ratelimit.ratelimit.burst=200
+      - traefik.http.routers.backend-prod.middlewares=backend-cors,backend-ratelimit
+    networks:
+      - msaada-network-prod
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Replicas backend (2, 3, 4)
+  backend-prod-2:
+    extends:
+      service: backend-prod-1
+    container_name: msaada-backend-prod-2
+
+  backend-prod-3:
+    extends:
+      service: backend-prod-1
+    container_name: msaada-backend-prod-3
+
+  backend-prod-4:
+    extends:
+      service: backend-prod-1
+    container_name: msaada-backend-prod-4
+
+  # =============================================================================
+  # FRONTEND REACT (2 INSTANCES)
+  # =============================================================================
+  frontend-prod-1:
+    image: sergenewton/assistance-msaada-frontend:production
+    container_name: msaada-frontend-prod-1
+    restart: unless-stopped
+    build:
+      context: ../frontend-web
+      dockerfile: Dockerfile
+      target: production
+      args:
+        - VITE_API_URL=https://api.assistance-msaada.org
+        - VITE_APP_ENV=production
+        - VITE_SENTRY_DSN=${SENTRY_DSN_FRONTEND_PROD}
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.frontend-prod.rule=Host(`assistance-msaada.org`) || Host(`www.assistance-msaada.org`)
+      - traefik.http.routers.frontend-prod.tls.certresolver=letsencrypt
+      - traefik.http.services.frontend-prod.loadbalancer.server.port=80
+      - traefik.http.middlewares.frontend-security.headers.frameDeny=true
+      - traefik.http.middlewares.frontend-security.headers.contentTypeNosniff=true
+      - traefik.http.middlewares.frontend-security.headers.browserXssFilter=true
+      - traefik.http.middlewares.frontend-security.headers.stsSeconds=31536000
+      - traefik.http.middlewares.frontend-security.headers.stsIncludeSubdomains=true
+      - traefik.http.middlewares.frontend-www-redirect.redirectregex.regex=^https://www\.(.*)
+      - traefik.http.middlewares.frontend-www-redirect.redirectregex.replacement=https://$${1}
+      - traefik.http.routers.frontend-prod.middlewares=frontend-security,frontend-www-redirect
+    networks:
+      - msaada-network-prod
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend-prod-2:
+    extends:
+      service: frontend-prod-1
+    container_name: msaada-frontend-prod-2
+
+  # =============================================================================
+  # BASE DE DONNÉES MYSQL (MASTER-SLAVE)
+  # =============================================================================
+  db-prod-master:
+    image: mysql:8.0
+    container_name: msaada-db-prod-master
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${PRODUCTION_DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: assistance_msaada_prod
+      MYSQL_USER: assistance_user
+      MYSQL_PASSWORD: ${PRODUCTION_DB_PASSWORD}
+      MYSQL_REPLICATION_MODE: master
+      MYSQL_REPLICATION_USER: replicator
+      MYSQL_REPLICATION_PASSWORD: ${MYSQL_REPLICATION_PASSWORD}
+    volumes:
+      - db_data_prod_master:/var/lib/mysql
+      - ./config/mysql/production:/etc/mysql/conf.d:ro
+      - ./backups/mysql-prod:/backups
+    ports:
+      - "3306:3306"
+    networks:
+      - msaada-network-prod
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '2.0'
+        reservations:
+          memory: 1G
+          cpus: '1.0'
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "assistance_user", "-p${PRODUCTION_DB_PASSWORD}"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 120s
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --innodb-buffer-pool-size=1G
+      --max-connections=500
+      --slow-query-log=1
+      --long-query-time=1
+      --innodb-log-file-size=256M
+      --query-cache-type=1
+      --query-cache-size=256M
+
+  # Réplica lecture seule (2 instances)
+  db-prod-replica-1:
+    image: mysql:8.0
+    container_name: msaada-db-prod-replica-1
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${PRODUCTION_DB_ROOT_PASSWORD}
+      MYSQL_REPLICATION_MODE: slave
+      MYSQL_REPLICATION_USER: replicator
+      MYSQL_REPLICATION_PASSWORD: ${MYSQL_REPLICATION_PASSWORD}
+      MYSQL_MASTER_HOST: db-prod-master
+      MYSQL_MASTER_PORT_NUMBER: 3306
+    volumes:
+      - db_data_prod_replica_1:/var/lib/mysql
+      - ./config/mysql/production:/etc/mysql/conf.d:ro
+    depends_on:
+      db-prod-master:
+        condition: service_healthy
+    networks:
+      - msaada-network-prod
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  db-prod-replica-2:
+    extends:
+      service: db-prod-replica-1
+    container_name: msaada-db-prod-replica-2
+    volumes:
+      - db_data_prod_replica_2:/var/lib/mysql
+      - ./config/mysql/production:/etc/mysql/conf.d:ro
+
+  # =============================================================================
+  # REDIS CLUSTER PRODUCTION
+  # =============================================================================
+  redis-prod-master:
+    image: redis:7-alpine
+    container_name: msaada-redis-prod-master
+    restart: unless-stopped
+    command: >
+      redis-server
+      --appendonly yes
+      --requirepass ${REDIS_PASSWORD}
+      --maxmemory 1gb
+      --maxmemory-policy allkeys-lru
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+    volumes:
+      - redis_data_prod_master:/data
+      - ./config/redis/production.conf:/usr/local/etc/redis/redis.conf:ro
+    ports:
+      - "6379:6379"
+    networks:
+      - msaada-network-prod
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis-prod-replica:
+    image: redis:7-alpine
+    container_name: msaada-redis-prod-replica
+    restart: unless-stopped
+    command: >
+      redis-server
+      --appendonly yes
+      --requirepass ${REDIS_PASSWORD}
+      --slaveof redis-prod-master 6379
+      --masterauth ${REDIS_PASSWORD}
+      --slave-read-only yes
+    volumes:
+      - redis_data_prod_replica:/data
+    depends_on:
+      - redis-prod-master
+    networks:
+      - msaada-network-prod
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # =============================================================================
+  # QUEUE WORKERS (HAUTE DISPONIBILITÉ)
+  # =============================================================================
+  queue-worker-prod-1:
+    image: sergenewton/assistance-msaada-backend:production
+    container_name: msaada-queue-prod-1
+    restart: unless-stopped
+    env_file:
+      - ../backend-api/.env.production
+    environment:
+      - APP_ENV=production
+      - DB_HOST=db-prod-master
+      - REDIS_HOST=redis-prod-master
+      - SENTRY_DSN=${SENTRY_DSN_BACKEND_PROD}
+    command: php artisan queue:work --sleep=3 --tries=3 --timeout=60 --memory=512
+    volumes:
+      - backend_storage_prod:/var/www/html/storage
+      - backend_logs_prod:/var/www/html/storage/logs
+    depends_on:
+      db-prod-master:
+        condition: service_healthy
+      redis-prod-master:
+        condition: service_healthy
+    networks:
+      - msaada-network-prod
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+
+  queue-worker-prod-2:
+    extends:
+      service: queue-worker-prod-1
+    container_name: msaada-queue-prod-2
+
+  queue-worker-prod-3:
+    extends:
+      service: queue-worker-prod-1
+    container_name: msaada-queue-prod-3
+
+  # =============================================================================
+  # MONITORING PRODUCTION - PROMETHEUS
+  # =============================================================================
+  prometheus-prod:
+    image: prom/prometheus:latest
+    container_name: msaada-prometheus-prod
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=90d'
+      - '--web.enable-lifecycle'
+      - '--storage.tsdb.retention.size=50GB'
+    volumes:
+      - ./monitoring/prometheus/production.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/rules:/etc/prometheus/rules:ro
+      - prometheus_data_prod:/prometheus
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.prometheus-prod.rule=Host(`prometheus.assistance-msaada.org`)
+      - traefik.http.routers.prometheus-prod.tls.certresolver=letsencrypt
+      - traefik.http.services.prometheus-prod.loadbalancer.server.port=9090
+      - traefik.http.middlewares.prometheus-auth.basicauth.users=admin:$$2y$$10$$secure.hash.password
+      - traefik.http.routers.prometheus-prod.middlewares=prometheus-auth
+    networks:
+      - msaada-network-prod
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+
+  # =============================================================================
+  # MONITORING PRODUCTION - GRAFANA
+  # =============================================================================
+  grafana-prod:
+    image: grafana/grafana:latest
+    container_name: msaada-grafana-prod
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GF_SERVER_DOMAIN=grafana.assistance-msaada.org
+      - GF_SERVER_ROOT_URL=https://grafana.assistance-msaada.org
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel,grafana-worldmap-panel,redis-datasource,mysql-datasource
+      - GF_SMTP_ENABLED=true
+      - GF_SMTP_HOST=${SMTP_HOST}:${SMTP_PORT}
+      - GF_SMTP_USER=${SMTP_USER}
+      - GF_SMTP_PASSWORD=${SMTP_PASSWORD}
+      - GF_SMTP_FROM_ADDRESS=alerts@assistance-msaada.org
+      - GF_SECURITY_DISABLE_INITIAL_ADMIN_CREATION=false
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+    volumes:
+      - grafana_data_prod:/var/lib/grafana
+      - ./monitoring/grafana/production:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards/production:/var/lib/grafana/dashboards:ro
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.grafana-prod.rule=Host(`grafana.assistance-msaada.org`)
+      - traefik.http.routers.grafana-prod.tls.certresolver=letsencrypt
+      - traefik.http.services.grafana-prod.loadbalancer.server.port=3000
+    networks:
+      - msaada-network-prod
+    depends_on:
+      - prometheus-prod
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+
+  # =============================================================================
+  # BACKUP AUTOMATIQUE PRODUCTION
+  # =============================================================================
+  backup-service-prod:
+    image: alpine:latest
+    container_name: msaada-backup-prod
+    restart: unless-stopped
+    environment:
+      - BACKUP_SCHEDULE=0 1,13 * * *  # Deux fois par jour
+      - MYSQL_HOST=db-prod-master
+      - MYSQL_USER=assistance_user
+      - MYSQL_PASSWORD=${PRODUCTION_DB_PASSWORD}
+      - MYSQL_DATABASE=assistance_msaada_prod
+      - S3_BUCKET=${BACKUP_S3_BUCKET_PROD}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - BACKUP_RETENTION_DAYS=90
+    volumes:
+      - ./scripts/backup-production:/backup-scripts:ro
+      - ./backups/production:/backups
+      - backend_storage_prod:/data/storage:ro
+    command: |
+      sh -c "
+        apk add --no-cache mysql-client aws-cli dcron curl
+        crontab -l | { cat; echo \"$$BACKUP_SCHEDULE /backup-scripts/backup-production.sh\"; } | crontab -
+        crond -f -L /dev/stdout
+      "
+    networks:
+      - msaada-network-prod
+    depends_on:
+      - db-prod-master
+
+# =============================================================================
+# VOLUMES PRODUCTION
+# =============================================================================
+volumes:
+  traefik_letsencrypt:
+    driver: local
+  db_data_prod_master:
+    driver: local
+  db_data_prod_replica_1:
+    driver: local
+  db_data_prod_replica_2:
+    driver: local
+  redis_data_prod_master:
+    driver: local
+  redis_data_prod_replica:
+    driver: local
+  backend_storage_prod:
+    driver: local
+  backend_logs_prod:
+    driver: local
+  prometheus_data_prod:
+    driver: local
+  grafana_data_prod:
+    driver: local
+
+# =============================================================================
+# RÉSEAUX PRODUCTION
+# =============================================================================
+networks:
+  msaada-network-prod:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.0.0/16

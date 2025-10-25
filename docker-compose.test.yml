@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  # Base de données MySQL pour le développement
+  db-test:
+    image: mysql:8.0
+    container_name: assistance-msaada-db-test
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: assistance_msaada_dev
+      MYSQL_USER: assistance_user
+      MYSQL_PASSWORD: dev_password_123
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "assistance_user", "-pdev_password_123"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis pour le cache et les sessions
+  redis-test:
+    image: redis:7-alpine
+    container_name: assistance-msaada-redis-test
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Service web simple pour tester la connectivité
+  web-test:
+    image: nginx:alpine
+    container_name: assistance-msaada-web-test
+    ports:
+      - "8080:80"
+    volumes:
+      - ./test-html:/usr/share/nginx/html:ro
+    depends_on:
+      - db-test
+      - redis-test
+
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  default:
+    name: assistance-msaada-network

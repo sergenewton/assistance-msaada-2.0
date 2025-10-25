@@ -1,0 +1,81 @@
+# Grafana Datasources Configuration
+# Auto-provisioning des sources de données
+
+apiVersion: 1
+
+datasources:
+  # Prometheus pour les métriques
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true
+    jsonData:
+      timeInterval: 15s
+      httpMethod: POST
+    basicAuth: false
+
+  # MySQL pour les données business
+  - name: MySQL-Application
+    type: mysql
+    access: proxy
+    url: db-staging:3306
+    database: assistance_msaada_staging
+    user: ${MYSQL_GRAFANA_USER}
+    jsonData:
+      maxOpenConns: 10
+      maxIdleConns: 2
+      connMaxLifetime: 14400
+    secureJsonData:
+      password: ${MYSQL_GRAFANA_PASSWORD}
+    editable: true
+
+  # Redis pour les métriques de cache
+  - name: Redis
+    type: redis-datasource
+    access: proxy
+    url: redis://redis-staging:6379
+    jsonData:
+      client: standalone
+      poolSize: 5
+      timeout: 10
+      pingInterval: 0
+    secureJsonData:
+      password: ${REDIS_PASSWORD}
+    editable: true
+
+  # Loki pour les logs
+  - name: Loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    editable: true
+    jsonData:
+      maxLines: 1000
+
+  # InfluxDB pour les métriques business (optionnel)
+  - name: InfluxDB
+    type: influxdb
+    access: proxy
+    url: http://influxdb:8086
+    database: assistance_msaada
+    user: ${INFLUXDB_USER}
+    secureJsonData:
+      password: ${INFLUXDB_PASSWORD}
+    jsonData:
+      timeInterval: 30s
+    editable: true
+
+  # Elasticsearch pour les logs applicatifs (si utilisé)
+  - name: Elasticsearch-Logs
+    type: elasticsearch
+    access: proxy
+    url: http://elasticsearch:9200
+    database: "[laravel-logs-]YYYY.MM.DD"
+    jsonData:
+      interval: Daily
+      timeField: "@timestamp"
+      esVersion: 70
+      maxConcurrentShardRequests: 5
+    editable: true

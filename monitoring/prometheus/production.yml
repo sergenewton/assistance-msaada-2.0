@@ -1,0 +1,182 @@
+# Prometheus Configuration for Production
+# High Availability Setup
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    environment: 'production'
+    project: 'assistance-msaada'
+    replica: '1'
+
+# Rules and alerting
+rule_files:
+  - "rules/*.yml"
+
+# Alertmanager configuration (HA)
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager-1:9093
+          - alertmanager-2:9093
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    honor_labels: true
+
+  # Node Exporter (System metrics)
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: 
+          - 'node-exporter-1:9100'
+          - 'node-exporter-2:9100'
+    scrape_interval: 15s
+    metrics_path: '/metrics'
+
+  # Backend Laravel applications (4 instances)
+  - job_name: 'backend-laravel'
+    static_configs:
+      - targets: 
+          - 'backend-prod-1:8000'
+          - 'backend-prod-2:8000'
+          - 'backend-prod-3:8000'
+          - 'backend-prod-4:8000'
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+
+  # Frontend applications
+  - job_name: 'frontend-react'
+    static_configs:
+      - targets:
+          - 'frontend-prod-1:80'
+          - 'frontend-prod-2:80'
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # MySQL Master-Slave
+  - job_name: 'mysql-master'
+    static_configs:
+      - targets: ['mysql-exporter-master:9104']
+    scrape_interval: 15s
+    labels:
+      role: 'master'
+
+  - job_name: 'mysql-replica'
+    static_configs:
+      - targets: 
+          - 'mysql-exporter-replica-1:9104'
+          - 'mysql-exporter-replica-2:9104'
+    scrape_interval: 30s
+    labels:
+      role: 'replica'
+
+  # Redis Cluster
+  - job_name: 'redis-master'
+    static_configs:
+      - targets: ['redis-exporter-master:9121']
+    scrape_interval: 15s
+    labels:
+      role: 'master'
+
+  - job_name: 'redis-replica'
+    static_configs:
+      - targets: ['redis-exporter-replica:9121']
+    scrape_interval: 30s
+    labels:
+      role: 'replica'
+
+  # Traefik Load Balancer
+  - job_name: 'traefik'
+    static_configs:
+      - targets: ['traefik-1:8080']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+
+  # Docker container metrics (cAdvisor)
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: 
+          - 'cadvisor-1:8080'
+          - 'cadvisor-2:8080'
+    scrape_interval: 15s
+
+  # Queue Workers (3 instances)
+  - job_name: 'laravel-queue'
+    static_configs:
+      - targets: 
+          - 'queue-worker-prod-1:8001'
+          - 'queue-worker-prod-2:8001'
+          - 'queue-worker-prod-3:8001'
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Application Business Metrics
+  - job_name: 'business-metrics'
+    static_configs:
+      - targets: ['backend-prod-1:8000']
+    metrics_path: '/api/metrics/business'
+    scrape_interval: 60s
+    bearer_token_file: /etc/prometheus/tokens/business_metrics_token
+
+  # Security Metrics (VBG specific)
+  - job_name: 'security-metrics'
+    static_configs:
+      - targets: ['backend-prod-1:8000']
+    metrics_path: '/api/metrics/security'
+    scrape_interval: 300s  # 5 minutes
+    bearer_token_file: /etc/prometheus/tokens/security_metrics_token
+
+  # External Service Monitoring
+  - job_name: 'blackbox-external'
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+        - https://assistance-msaada.org
+        - https://api.assistance-msaada.org/health
+        - https://api.assistance-msaada.org/api/status
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+    scrape_interval: 60s
+
+  # SSL Certificate monitoring
+  - job_name: 'ssl-certificates'
+    metrics_path: /probe
+    params:
+      module: [http_ssl_verify]
+    static_configs:
+      - targets:
+        - https://assistance-msaada.org:443
+        - https://api.assistance-msaada.org:443
+        - https://grafana.assistance-msaada.org:443
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+    scrape_interval: 3600s  # 1 hour
+
+# Remote write for long-term storage
+remote_write:
+  - url: "https://prometheus-longterm.assistance-msaada.org/api/v1/write"
+    basic_auth:
+      username: "${PROMETHEUS_REMOTE_USER}"
+      password: "${PROMETHEUS_REMOTE_PASSWORD}"
+    write_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'up|http_requests_total|mysql_up|redis_connected_clients'
+        action: keep
