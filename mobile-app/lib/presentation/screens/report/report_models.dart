@@ -114,7 +114,6 @@ class ReportFormData {
     String? victimName,
     AgeGroup? victimAgeGroup,
     Sex? victimSex,
-  String? nationality,
     DateTime? incidentDate,
   String? addressLine,
     double? latitude,

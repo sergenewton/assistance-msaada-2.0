@@ -450,6 +450,7 @@ class _Step2PersonsAndIncidentState extends State<_Step2PersonsAndIncident> {
   final FlutterSoundRecorder _recorder = FlutterSoundRecorder();
   bool _recorderReady = false;
   bool _isRecording = false;
+  bool _gpsSuccess = false;
 
   @override
   void initState() {
@@ -548,28 +549,40 @@ class _Step2PersonsAndIncidentState extends State<_Step2PersonsAndIncident> {
           ]),
           const SizedBox(height: 12),
           const Text('Adresse de l’incident (une ligne)'),
-          TextFormField(
-            controller: _addressCtrl,
-            decoration: InputDecoration(
-              labelText: 'Adresse',
-              hintText: 'Saisissez l’adresse (ex: Avenue X, Commune Y)'.trim(),
-              suffixIcon: Tooltip(
-                message: 'Envoyer ma position',
-                child: IconButton(
-                  icon: const Icon(Icons.my_location_outlined),
-                  onPressed: _onSendMyLocation,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: TextFormField(
+                  controller: _addressCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Adresse',
+                    hintText: 'Saisissez l’adresse (ex: Avenue X, Commune Y)',
+                  ),
+                  onChanged: (v) => widget.onChanged(d.copyWith(addressLine: v.isEmpty ? null : v)),
                 ),
               ),
-            ),
-            onChanged: (v) => widget.onChanged(d.copyWith(addressLine: v.isEmpty ? null : v)),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: _onSendMyLocation,
+                    icon: const Icon(Icons.my_location_outlined),
+                    label: const Text('Envoyer ma position'),
+                  ),
+                  if (_gpsSuccess)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 6),
+                      child: Text(
+                        'Position recuperée avec succès',
+                        style: TextStyle(color: Color(0xFF2E7D32), fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                ],
+              ),
+            ],
           ),
-          if (d.latitude != null && d.longitude != null) ...[
-            const SizedBox(height: 6),
-            Text(
-              'Position ajoutée: (${d.latitude!.toStringAsFixed(5)}, ${d.longitude!.toStringAsFixed(5)})',
-              style: const TextStyle(color: Colors.grey),
-            ),
-          ],
           const SizedBox(height: 12),
           const Text('Description de l’incident'),
           const SizedBox(height: 6),
@@ -656,7 +669,7 @@ class _Step2PersonsAndIncidentState extends State<_Step2PersonsAndIncident> {
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        // Silently ignore if disabled to keep it "hidden"/non-intrusive
+        setState(() => _gpsSuccess = false);
         return;
       }
 
@@ -664,10 +677,12 @@ class _Step2PersonsAndIncidentState extends State<_Step2PersonsAndIncident> {
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
+          setState(() => _gpsSuccess = false);
           return; // user denied
         }
       }
       if (permission == LocationPermission.deniedForever) {
+        setState(() => _gpsSuccess = false);
         return; // cannot request
       }
 
@@ -675,14 +690,9 @@ class _Step2PersonsAndIncidentState extends State<_Step2PersonsAndIncident> {
       if (!mounted) return;
       final d = widget.data.copyWith(latitude: pos.latitude, longitude: pos.longitude);
       widget.onChanged(d);
-      // Optionally provide a subtle feedback
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Position ajoutée'), duration: Duration(seconds: 2)),
-        );
-      }
+      setState(() => _gpsSuccess = true);
     } catch (_) {
-      // ignore silently for now
+      setState(() => _gpsSuccess = false);
     }
   }
 }
