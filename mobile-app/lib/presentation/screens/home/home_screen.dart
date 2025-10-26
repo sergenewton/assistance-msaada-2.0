@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:go_router/go_router.dart';
+import '../../../core/constants/route_constants.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -146,7 +148,7 @@ class HomeScreen extends StatelessWidget {
                               Icons.phone_outlined,
                               const Color(0xFFFFEBEE),
                               const Color(0xFFE57373),
-                              () {},
+                              () => context.push(RouteConstants.reportForm),
                             ),
                           ),
                           const SizedBox(width: 12),

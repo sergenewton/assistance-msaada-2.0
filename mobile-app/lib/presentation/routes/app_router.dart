@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/route_constants.dart';
 import '../screens/home/home_screen.dart';
+import '../screens/report/report_wizard_screen.dart';
 
 class AppRouter {
   static final GoRouter _router = GoRouter(
@@ -18,11 +19,7 @@ class AppRouter {
       GoRoute(
         path: RouteConstants.reportForm,
         name: 'report-form',
-        builder: (context, state) => const Scaffold(
-          body: Center(
-            child: Text('Formulaire de signalement'),
-          ),
-        ),
+        builder: (context, state) => const ReportWizardScreen(),
       ),
       
       GoRoute(
