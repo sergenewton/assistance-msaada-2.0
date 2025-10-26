@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 import 'package:dio/dio.dart';
 import '../constants/api_constants.dart';
@@ -115,19 +114,29 @@ class ApiClient {
   }
   
   Exception _handleError(dynamic error) {
-    if (error is DioError) {
+    if (error is DioException) {
       switch (error.type) {
-        case DioErrorType.connectTimeout:
-        case DioErrorType.sendTimeout:
-        case DioErrorType.receiveTimeout:
+        case DioExceptionType.connectionTimeout:
+        case DioExceptionType.sendTimeout:
+        case DioExceptionType.receiveTimeout:
           return const NetworkException('Connection timeout');
-        case DioErrorType.response:
+        case DioExceptionType.badCertificate:
+          return const NetworkException('Bad SSL certificate');
+        case DioExceptionType.badResponse:
           final statusCode = error.response?.statusCode;
-          final message = error.response?.data?['message'] ?? 'Server error';
+          final data = error.response?.data;
+          String message = 'Server error';
+          if (data is Map && data['message'] is String) {
+            message = data['message'] as String;
+          } else if (data is String && data.isNotEmpty) {
+            message = data;
+          }
           return ServerException(message, statusCode);
-        case DioErrorType.cancel:
+        case DioExceptionType.cancel:
           return const NetworkException('Request cancelled');
-        default:
+        case DioExceptionType.connectionError:
+          return const NetworkException('Network connection error');
+        case DioExceptionType.unknown:
           return const NetworkException('Network error');
       }
     }

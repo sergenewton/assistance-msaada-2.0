@@ -4,13 +4,11 @@ import '../constants/app_constants.dart';
 import 'encryption_service.dart';
 
 class SecureStorage {
-  static const _storage = FlutterSecureStorage(
-    aOptions: AndroidOptions(
+  static final _storage = FlutterSecureStorage(
+    aOptions: const AndroidOptions(
       encryptedSharedPreferences: true,
     ),
-    iOptions: IOSOptions(
-      accessibility: IOSAccessibility.first_unlock_this_device,
-    ),
+    // Use default iOS options to avoid symbol mismatches across versions
   );
   
   /// Store access token securely

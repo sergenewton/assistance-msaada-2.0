@@ -229,4 +229,36 @@ class ReportRepositoryImpl implements ReportRepository {
       return Left(UnknownFailure(e.toString()));
     }
   }
+
+  // -- Minimal placeholder implementations to satisfy interface --
+
+  @override
+  Future<Either<Failure, List<Report>>> getReportsByStatus(ReportStatus status) async {
+    return const Left(UnknownFailure('Not implemented'));
+  }
+
+  @override
+  Future<Either<Failure, List<Report>>> getReportsByType(ReportType type) async {
+    return const Left(UnknownFailure('Not implemented'));
+  }
+
+  @override
+  Future<Either<Failure, List<Report>>> getReportsByUrgency(UrgencyLevel urgency) async {
+    return const Left(UnknownFailure('Not implemented'));
+  }
+
+  @override
+  Future<Either<Failure, List<Report>>> getRecentReports(String userId) async {
+    return const Left(UnknownFailure('Not implemented'));
+  }
+
+  @override
+  Future<Either<Failure, List<Report>>> searchReports(String query, String userId) async {
+    return const Left(UnknownFailure('Not implemented'));
+  }
+
+  @override
+  Future<Either<Failure, Map<String, dynamic>>> getReportStatistics(String userId) async {
+    return const Left(UnknownFailure('Not implemented'));
+  }
 }

@@ -50,7 +50,7 @@ class DateFormatter {
     } else if (difference.inMinutes > 0) {
       return 'il y a ${difference.inMinutes} minute${difference.inMinutes > 1 ? 's' : ''}';
     } else {
-      return 'à l\\'instant';
+  return 'à l\'instant';
     }
   }
   

@@ -1,6 +1,5 @@
 import 'package:local_auth/local_auth.dart';
-import 'package:local_auth_android/local_auth_android.dart';
-import 'package:local_auth_ios/local_auth_ios.dart';
+// Android-specific messages are available via local_auth, avoid extra imports for cross-platform builds
 import '../error/exceptions.dart';
 
 class BiometricAuth {
@@ -39,22 +38,7 @@ class BiometricAuth {
       
       return await _localAuth.authenticate(
         localizedReason: localizedReason,
-        authMessages: const [
-          AndroidAuthMessages(
-            signInTitle: 'Authentification biométrique',
-            cancelButton: 'Annuler',
-            deviceCredentialsRequiredTitle: 'Authentification requise',
-            deviceCredentialsSetupDescription: 'Veuillez configurer votre authentification',
-            goToSettingsButton: 'Paramètres',
-            goToSettingsDescription: 'Configurez votre authentification biométrique',
-          ),
-          IOSAuthMessages(
-            cancelButton: 'Annuler',
-            goToSettingsButton: 'Paramètres',
-            goToSettingsDescription: 'Configurez votre authentification biométrique',
-            lockOut: 'Authentification biométrique désactivée',
-          ),
-        ],
+        // Use default platform messages to avoid platform-specific imports that break on web
         options: AuthenticationOptions(
           biometricOnly: biometricOnly,
           stickyAuth: true,
@@ -93,7 +77,7 @@ class BiometricAuth {
     } else if (types.contains(BiometricType.fingerprint)) {
       return 'Empreinte digitale';
     } else if (types.contains(BiometricType.iris)) {
-      return 'Reconnaissance d\\'iris';
+      return 'Reconnaissance d\'iris';
     } else if (types.contains(BiometricType.strong)) {
       return 'Authentification biométrique';
     } else if (types.contains(BiometricType.weak)) {

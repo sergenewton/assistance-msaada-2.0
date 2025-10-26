@@ -1,401 +1,418 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../widgets/common/custom_button.dart';
-import '../../../core/constants/route_constants.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
-class HomeScreen extends ConsumerStatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
-
-  @override
-  ConsumerState<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends ConsumerState<HomeScreen> {
-  @override
-  void initState() {
-    super.initState();
-    // Load initial data
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Initialize providers if needed
-    });
-  }
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF7F8FA),
       appBar: AppBar(
-        title: const Text('Assistance Msaada 2.0'),
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
         elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications),
-            onPressed: () {
-              // Navigate to notifications
-              Navigator.pushNamed(context, '/notifications');
-            },
-          ),
-        ],
+        backgroundColor: const Color(0xFF4CAF50),
+        foregroundColor: Colors.white,
+        automaticallyImplyLeading: false,
+        toolbarHeight: 88,
+        titleSpacing: 16,
+        title: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Left: App logo
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: SvgPicture.asset(
+                'assets/images/logo.svg',
+                width: 48,
+                height: 48,
+              ),
+            ),
+            const SizedBox(width: 12),
+            // Center: Title + Subtitle
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  Text(
+                    'ASSISTANCE MSAADA',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Informer – Protéger – Soutenir',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12.5,
+                      fontStyle: FontStyle.italic,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            // Right: Settings button
+            IconButton(
+              icon: const Icon(Icons.settings_outlined, color: Colors.white, size: 26),
+              onPressed: () {
+                // TODO: Navigate to settings page when available
+              },
+              tooltip: 'Paramètres',
+            ),
+          ],
+        ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Welcome section
-              _buildWelcomeSection(context),
-              const SizedBox(height: 24),
-              
-              // Emergency section
-              _buildEmergencySection(context),
-              const SizedBox(height: 24),
-              
-              // Quick actions
-              _buildQuickActions(context),
-              const SizedBox(height: 24),
-              
-              // Recent content
-              _buildRecentContent(context),
-            ],
-          ),
-        ),
-      ),
-      bottomNavigationBar: _buildBottomNavigationBar(context),
-    );
-  }
-
-  Widget _buildWelcomeSection(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Theme.of(context).primaryColor,
-            Theme.of(context).primaryColor.withOpacity(0.8),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Bienvenue',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Vous n\'êtes pas seul(e). Nous sommes là pour vous aider.',
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.9),
-              fontSize: 16,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmergencySection(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.red.shade50,
-        border: Border.all(color: Colors.red.shade200),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        children: [
-          const Icon(
-            Icons.emergency,
-            color: Colors.red,
-            size: 32,
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Urgence ?',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.red,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Si vous êtes en danger immédiat, contactez les services d\'urgence',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 14),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: CustomButton(
-                  text: '117 - Police',
-                  onPressed: () => _makeEmergencyCall('117'),
-                  backgroundColor: Colors.red,
-                  textColor: Colors.white,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: CustomButton(
-                  text: '118 - Pompiers',
-                  onPressed: () => _makeEmergencyCall('118'),
-                  backgroundColor: Colors.red,
-                  textColor: Colors.white,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuickActions(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Actions rapides',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 16),
-        GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: 2,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-          childAspectRatio: 1.2,
-          children: [
-            _buildActionCard(
-              context,
-              icon: Icons.report,
-              title: 'Signaler',
-              subtitle: 'Faire un signalement',
-              onTap: () => Navigator.pushNamed(context, RouteConstants.reportForm),
-            ),
-            _buildActionCard(
-              context,
-              icon: Icons.chat,
-              title: 'Chat',
-              subtitle: 'Parler à un conseiller',
-              onTap: () => Navigator.pushNamed(context, RouteConstants.chat),
-            ),
-            _buildActionCard(
-              context,
-              icon: Icons.article,
-              title: 'Articles',
-              subtitle: 'Ressources utiles',
-              onTap: () => Navigator.pushNamed(context, RouteConstants.articles),
-            ),
-            _buildActionCard(
-              context,
-              icon: Icons.video_library,
-              title: 'Vidéos',
-              subtitle: 'Contenu éducatif',
-              onTap: () => Navigator.pushNamed(context, RouteConstants.videos),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildActionCard(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.grey.shade50,
-          border: Border.all(color: Colors.grey.shade200),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              size: 32,
-              color: Theme.of(context).primaryColor,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey.shade600,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRecentContent(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              'Contenu récent',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pushNamed(context, RouteConstants.articles),
-              child: const Text('Voir tout'),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 120,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: 3, // Mock data
-            itemBuilder: (context, index) {
-              return Container(
-                width: 200,
-                margin: const EdgeInsets.only(right: 12),
-                padding: const EdgeInsets.all(12),
+              // Search + Quick Access panel (single row)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border.all(color: Colors.grey.shade200),
-                  borderRadius: BorderRadius.circular(8),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.shade100,
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+                  color: const Color(0xFFF6F7FF),
+                  borderRadius: BorderRadius.circular(16),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Article ${index + 1}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
+                    // Search bar
+                    Container(
+                      height: 48,
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.03),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                      child: const Row(
+                        children: [
+                          Icon(Icons.search_outlined, color: Colors.grey, size: 22),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Recherche un sujet...',
+                              style: TextStyle(
+                                color: Colors.grey,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Description de l\'article...',
+                    const SizedBox(height: 16),
+                    const Text(
+                      'ACCÈS RAPIDE',
                       style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey,
+                        letterSpacing: 0.5,
                       ),
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 12),
+                    // Single row quick access (4 items)
+                    SizedBox(
+                      height: 110,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _buildQuickAccessCard(
+                              context,
+                              'Dénoncer',
+                              Icons.phone_outlined,
+                              const Color(0xFFFFEBEE),
+                              const Color(0xFFE57373),
+                              () {},
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildQuickAccessCard(
+                              context,
+                              'Centres',
+                              Icons.location_on_outlined,
+                              const Color(0xFFE8F5E8),
+                              const Color(0xFF81C784),
+                              () {},
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildQuickAccessCard(
+                              context,
+                              'Sécurité',
+                              Icons.shield_outlined,
+                              const Color(0xFFFFF8E1),
+                              const Color(0xFFFFB74D),
+                              () {},
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildQuickAccessCard(
+                              context,
+                              'Stories',
+                              Icons.favorite_border,
+                              const Color(0xFFFCE4EC),
+                              const Color(0xFFF06292),
+                              () {},
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
-              );
-            },
+              ),
+
+              const SizedBox(height: 24),
+
+              const Text(
+                'Informations utiles',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              _buildInfoCard(
+                context,
+                'Ressources éducatives',
+                'Guides et informations sur la VBG',
+                Icons.menu_book_outlined,
+                const Color(0xFF4CAF50),
+              ),
+              const SizedBox(height: 12),
+              _buildInfoCard(
+                context,
+                'Conseils de sécurité',
+                'Protégez-vous et restez en sécurité',
+                Icons.shield_outlined,
+                const Color(0xFF2196F3),
+              ),
+              const SizedBox(height: 12),
+              _buildInfoCard(
+                context,
+                'Témoignages et histoires',
+                'Expériences de survie et de guérison',
+                Icons.people_outline,
+                const Color(0xFF9C27B0),
+              ),
+
+              const SizedBox(height: 24),
+
+              // Support message (title + message inside the same card)
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8F5E8),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: const Color(0xFF4CAF50).withOpacity(0.3),
+                  ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.favorite_outline,
+                      color: Color(0xFF4CAF50),
+                      size: 24,
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Vous n\'êtes pas seul(e)',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF2E7D32),
+                            ),
+                          ),
+                          SizedBox(height: 6),
+                          Text(
+                            'Nous sommes là pour vous accompagner dans cette épreuve. Votre courage de chercher de l\'aide est le premier pas vers la guérison.',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey,
+                              height: 1.4,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
-      ],
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: const Color(0xFF4CAF50),
+        unselectedItemColor: Colors.grey,
+        currentIndex: 0,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined),
+            label: 'Accueil',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.phone_outlined),
+            label: 'Dénoncer',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            label: 'Mon espace',
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildBottomNavigationBar(BuildContext context) {
-    return BottomNavigationBar(
-      type: BottomNavigationBarType.fixed,
-      selectedItemColor: Theme.of(context).primaryColor,
-      unselectedItemColor: Colors.grey,
-      currentIndex: 0,
-      items: const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.home),
-          label: 'Accueil',
+  Widget _buildQuickAccessCard(
+    BuildContext context,
+    String title,
+    IconData icon,
+    Color backgroundColor,
+    Color iconColor,
+    VoidCallback onTap,
+  ) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.report),
-          label: 'Signalements',
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                icon,
+                size: 32,
+                color: iconColor,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
+          ],
         ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.chat),
-          label: 'Chat',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.library_books),
-          label: 'Ressources',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.settings),
-          label: 'Paramètres',
-        ),
-      ],
-      onTap: (index) {
-        switch (index) {
-          case 0:
-            // Already on home
-            break;
-          case 1:
-            Navigator.pushNamed(context, RouteConstants.myReports);
-            break;
-          case 2:
-            Navigator.pushNamed(context, RouteConstants.chat);
-            break;
-          case 3:
-            Navigator.pushNamed(context, RouteConstants.articles);
-            break;
-          case 4:
-            Navigator.pushNamed(context, RouteConstants.settings);
-            break;
-        }
-      },
+      ),
     );
   }
 
-  void _makeEmergencyCall(String number) {
-    // This would use the helpers to make an actual phone call
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Appel d\'urgence au $number'),
-        backgroundColor: Colors.red,
+  Widget _buildInfoCard(
+    BuildContext context,
+    String title,
+    String subtitle,
+    IconData icon,
+    Color iconColor,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: iconColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              icon,
+              color: iconColor,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Icon(
+            Icons.arrow_forward_ios,
+            size: 16,
+            color: Colors.grey,
+          ),
+        ],
       ),
     );
   }

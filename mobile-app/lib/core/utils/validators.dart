@@ -4,7 +4,7 @@ class Validators {
   /// Validate email address
   static String? validateEmail(String? value) {
     if (value == null || value.isEmpty) {
-      return 'L\\'adresse email est requise';
+  return 'L\'adresse email est requise';
     }
     
     final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
@@ -98,7 +98,7 @@ class Validators {
     }
     
     // Check for valid characters (letters, spaces, hyphens, apostrophes)
-    final nameRegex = RegExp(r'^[a-zA-ZÀ-ÿ\s\-\']+$');
+  final nameRegex = RegExp(r"^[a-zA-ZÀ-ÿ\s\-']+$");
     if (!nameRegex.hasMatch(value)) {
       return '$fieldName ne doit contenir que des lettres, espaces, tirets et apostrophes';
     }
@@ -109,7 +109,7 @@ class Validators {
   /// Validate age
   static String? validateAge(String? value) {
     if (value == null || value.isEmpty) {
-      return 'L\\'âge est requis';
+  return 'L\'âge est requis';
     }
     
     final age = int.tryParse(value);

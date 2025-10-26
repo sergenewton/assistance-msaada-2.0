@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
@@ -190,6 +191,3 @@ class Helpers {
     }
   }
 }
-
-// Import Timer class
-import 'dart:async';
