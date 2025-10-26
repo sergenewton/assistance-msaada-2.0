@@ -25,6 +25,9 @@ class HomeScreen extends StatelessWidget {
                 'assets/images/logo.svg',
                 width: 48,
                 height: 48,
+                // Force white rendering for logos that use currentColor or lack explicit fills
+                colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                theme: const SvgTheme(currentColor: Colors.white),
               ),
             ),
             const SizedBox(width: 12),
