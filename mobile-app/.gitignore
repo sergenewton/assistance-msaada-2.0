@@ -1,106 +1,45 @@
-# ===================================
-# FLUTTER MOBILE - GITIGNORE
-# ===================================
-
-# ------ Dart & Flutter ------
-# See https://dart.dev/guides/libraries/private-files
-
-# ------ Build & Cache ------
-**/build/
-**/.dart_tool/
-**/.flutter-plugins
-**/.flutter-plugins-dependencies
-**/.packages
-.metadata
-.pub/
-.pub-cache/
-
-# ------ Generated Files ------
-**/*.g.dart
-**/*.freezed.dart
-**/*.gr.dart
-**/*.config.dart
-
-# ------ IDE & OS ------
-.idea/
-.vscode/
+# Miscellaneous
+*.class
+*.log
+*.pyc
 *.swp
-*.swo
 .DS_Store
-Thumbs.db
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
 *.iml
 *.ipr
 *.iws
+.idea/
 
-# ------ Flutter Assets ------
-flutter_*.png
-flutter_*.ipa
-flutter_*.apk
-flutter_*.aab
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
 
-# ------ Android ------
-android/app/debug/
-android/app/profile/
-android/app/release/
-android/gradle.properties
-android/key.properties
-android/app/google-services.json
-android/app/src/debug/google-services.json
-android/app/src/profile/google-services.json
-android/app/src/release/google-services.json
-android/keystore.jks
-android/app/keystore.jks
-*.jks
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
 
-# ------ iOS ------
-ios/Runner.xcworkspace/xcshareddata/
-ios/Flutter/Generated.xcconfig
-ios/Flutter/flutter_export_environment.sh
-ios/Runner/GoogleService-Info.plist
-ios/firebase_app_id_file.json
-ios/Pods/
-ios/.symlinks/
+# Symbolication related
+app.*.symbols
 
-# ------ Environment & Secrets ------
-.env
-.env.local
-.env.production
-.env.development
-key.properties
-firebase_options.dart
-google-services.json
-GoogleService-Info.plist
+# Obfuscation related
+app.*.map.json
 
-# ------ Logs ------
-*.log
-logs/
-
-# ------ Coverage ------
-coverage/
-lcov.info
-
-# ------ Web ------
-web/favicon.png
-web/icons/Icon-192.png
-web/icons/Icon-512.png
-web/manifest.json
-
-# ------ Testing ------
-test/.test_coverage.dart
-test_coverage/
-
-# ------ Firebase ------
-.firebase/
-firebase-debug.log
-firestore-debug.log
-
-# ------ Code Generation ------
-*.inject.summary
-*.inject.dart
-*.jvmargs
-
-# ------ Fastlane ------
-fastlane/report.xml
-fastlane/Preview.html
-fastlane/screenshots
-fastlane/test_output
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release

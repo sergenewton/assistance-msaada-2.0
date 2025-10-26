@@ -1,13 +1,13 @@
 #!/bin/bash
 
 # Script de démarrage rapide Assistance Msaada 2.0
-# Orchestration complète du système VBG avec monitoring
+# Version locale pour développement (PHP + Vite)
 
 set -e
 
 # Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+PROJECT_ROOT="$SCRIPT_DIR"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
 # Couleurs

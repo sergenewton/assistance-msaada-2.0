@@ -1,91 +1,82 @@
-name: vbg_platform_mobile
-description: "Application mobile pour la plateforme de signalement VBG"
-publish_to: 'none'
+name: assistance_msaada_2
+description: "Plateforme de signalement et d'assistance médicale"
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
 version: 1.0.0+1
 
 environment:
   sdk: '>=3.1.0 <4.0.0'
-  flutter: ">=3.13.0"
 
 dependencies:
   flutter:
     sdk: flutter
-  flutter_localizations:
-    sdk: flutter
-  
-  # State Management
-  flutter_riverpod: ^2.4.9
-  riverpod_annotation: ^2.3.3
-  equatable: ^2.0.5
-  
-  # Network
-  http: ^1.1.0
-  dio: ^5.3.2
-  pretty_dio_logger: ^1.3.1
-  
-  # Local Storage
-  shared_preferences: ^2.2.2
+
+  # État et navigation
+  flutter_riverpod: ^2.4.0
+  go_router: ^13.0.0
+
+  # Réseau et API
+  dio: ^5.4.0
+  retrofit: ^4.0.3
+  json_annotation: ^4.8.1
+
+  # Stockage sécurisé
+  flutter_secure_storage: ^9.0.0
   hive: ^2.2.3
   hive_flutter: ^1.1.0
-  
-  # UI Components
-  cupertino_icons: ^1.0.2
-  flutter_svg: ^2.0.7
-  cached_network_image: ^3.3.0
+
+  # Authentification
+  local_auth: ^2.1.7
+
+  # Notifications (Firebase temporairement désactivé)
+  # firebase_core: ^2.24.2
+  # firebase_messaging: ^14.7.9
+  flutter_local_notifications: ^16.3.0
+
+  # Chat et communication
+  socket_io_client: ^2.0.3
+
+  # Audio
+  flutter_sound: ^9.2.13
+  permission_handler: ^11.1.0
+
+  # Image et fichiers
+  image_picker: ^1.0.7
+  file_picker: ^6.1.1
+  cached_network_image: ^3.3.1
+
+  # Chiffrement
+  encrypt: ^5.0.3
+  pointycastle: ^3.7.4
+
+  # UI
+  flutter_svg: ^2.0.9
+  # Flutter 3.35 pins flutter_localizations to intl 0.20.2
+  intl: ^0.20.2
+  timeago: ^3.6.0
   shimmer: ^3.0.0
+
+  # Localisation
+  flutter_localizations:
+    sdk: flutter
+
+  # Utilitaires
+  connectivity_plus: ^5.0.2
+  url_launcher: ^6.2.3
+  share_plus: ^7.2.1
   
-  # Forms & Validation
-  formz: ^0.6.1
-  
-  # Navigation
-  go_router: ^12.0.0
-  
-  # Utilities
-  intl: ^0.18.1
-  logger: ^2.0.2+1
-  permission_handler: ^11.0.1
-  image_picker: ^1.0.4
-  file_picker: ^6.0.0
-  geolocator: ^9.0.2
+  # Dépendances manquantes
   dartz: ^0.10.1
-  
-  # Security
-  crypto: ^3.0.3
-  
-  # Dependency Injection
-  get_it: ^7.6.4
-  injectable: ^2.3.2
+  equatable: ^2.0.5
+  shared_preferences: ^2.0.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^3.0.0
-  
-  # Code Generation
   build_runner: ^2.4.7
-  hive_generator: ^2.0.1
-  injectable_generator: ^2.4.1
-  
-  # Testing
-  mocktail: ^1.0.0
-  flutter_riverpod_test: ^1.0.0
-  
-  # Riverpod Code Generation
-  riverpod_generator: ^2.3.9
-  riverpod_lint: ^2.3.7
+  retrofit_generator: ^8.0.4
+  json_serializable: ^6.7.1
+  flutter_launcher_icons: ^0.13.1
 
 flutter:
   uses-material-design: true
-  
-  assets:
-    - assets/images/
-    - assets/translations/
-    
-  fonts:
-    - family: Roboto
-      fonts:
-        - asset: assets/fonts/Roboto-Regular.ttf
-        - asset: assets/fonts/Roboto-Medium.ttf
-          weight: 500
-        - asset: assets/fonts/Roboto-Bold.ttf
-          weight: 700

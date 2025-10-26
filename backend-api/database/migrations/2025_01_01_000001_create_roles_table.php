@@ -16,10 +16,14 @@ return new class extends Migration
             $table->enum('name', ['survivante', 'aps', 'operateur', 'organisation', 'superviseur', 'admin'])
                   ->unique();
             $table->string('display_name');
+            $table->text('description')->nullable();
+            $table->json('permissions')->nullable(); // Permissions granulaires RBAC
+            $table->boolean('is_active')->default(true);
             $table->timestamps();
 
             // Index
             $table->index('name');
+            $table->index('is_active');
         });
     }
 

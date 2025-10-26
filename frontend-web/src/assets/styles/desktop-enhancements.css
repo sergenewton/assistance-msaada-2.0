@@ -1,0 +1,281 @@
+/* Styles additionnels pour optimisation desktop/tablette */
+
+/* Layout responsive amélioré */
+.responsive-container {
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+@media (min-width: 640px) {
+  .responsive-container {
+    padding: 0 1.5rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .responsive-container {
+    padding: 0 2rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .responsive-container {
+    max-width: 1200px;
+    padding: 0 2.5rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .responsive-container {
+    max-width: 1440px;
+    padding: 0 3rem;
+  }
+}
+
+/* Améliorations pour les cartes */
+.card-desktop {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.card-desktop:hover {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  transform: translateY(-2px);
+}
+
+@media (min-width: 768px) {
+  .card-desktop {
+    padding: 2rem;
+  }
+}
+
+/* Améliorations typographiques pour desktop */
+@media (min-width: 768px) {
+  .heading-1 {
+    font-size: 3rem;
+    line-height: 1.1;
+    font-weight: 800;
+  }
+  
+  .heading-2 {
+    font-size: 2.25rem;
+    line-height: 1.2;
+    font-weight: 700;
+  }
+  
+  .heading-3 {
+    font-size: 1.875rem;
+    line-height: 1.3;
+    font-weight: 600;
+  }
+  
+  .text-lead {
+    font-size: 1.125rem;
+    line-height: 1.6;
+  }
+}
+
+/* Améliorations pour les boutons desktop */
+.btn-desktop-primary {
+  background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.btn-desktop-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px -5px rgba(124, 58, 237, 0.4);
+}
+
+.btn-desktop-primary:active {
+  transform: translateY(0);
+}
+
+@media (min-width: 768px) {
+  .btn-desktop-primary {
+    padding: 1rem 2rem;
+    font-size: 1.1rem;
+  }
+}
+
+/* Grilles responsive améliorées */
+.grid-desktop-1 {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .grid-desktop-2 {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .grid-desktop-3 {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .grid-desktop-4 {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2.5rem;
+  }
+}
+
+/* Améliorations pour les formulaires desktop */
+.form-group-desktop {
+  margin-bottom: 1.5rem;
+}
+
+.form-input-desktop {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  background: white;
+}
+
+.form-input-desktop:focus {
+  outline: none;
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+}
+
+@media (min-width: 768px) {
+  .form-input-desktop {
+    padding: 1rem 1.25rem;
+    font-size: 1.1rem;
+  }
+}
+
+/* Navigation desktop améliorée */
+.nav-desktop {
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.nav-desktop-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+@media (min-width: 768px) {
+  .nav-desktop-content {
+    padding: 1.5rem 2rem;
+  }
+}
+
+/* Améliorations pour les alertes */
+.alert-desktop {
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.alert-desktop.error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+
+.alert-desktop.success {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+
+.alert-desktop.warning {
+  background: #fffbeb;
+  border: 1px solid #fed7aa;
+  color: #92400e;
+}
+
+.alert-desktop.info {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e40af;
+}
+
+/* Améliorations d'accessibilité desktop */
+@media (prefers-reduced-motion: reduce) {
+  .card-desktop,
+  .btn-desktop-primary,
+  .form-input-desktop {
+    transition: none;
+  }
+  
+  .card-desktop:hover {
+    transform: none;
+  }
+  
+  .btn-desktop-primary:hover {
+    transform: none;
+  }
+}
+
+/* Dark mode support amélioré */
+@media (prefers-color-scheme: dark) {
+  .card-desktop {
+    background: #1f2937;
+    border: 1px solid #374151;
+  }
+  
+  .form-input-desktop {
+    background: #1f2937;
+    border-color: #374151;
+    color: white;
+  }
+  
+  .form-input-desktop:focus {
+    border-color: #a855f7;
+  }
+  
+  .nav-desktop {
+    background: #1f2937;
+    border-bottom-color: #374151;
+  }
+}
+
+/* Améliorations pour l'impression */
+@media print {
+  .nav-desktop,
+  .btn-desktop-primary {
+    display: none;
+  }
+  
+  .card-desktop {
+    box-shadow: none;
+    border: 1px solid #000;
+  }
+}
