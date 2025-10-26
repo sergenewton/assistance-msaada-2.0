@@ -3,6 +3,9 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:flutter_sound/flutter_sound.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../../../core/constants/route_constants.dart';
 import 'report_models.dart';
 
@@ -91,7 +94,7 @@ class _ReportWizardScreenState extends State<ReportWizardScreen> {
       appBar: AppBar(
         backgroundColor: const Color(0xFF4CAF50),
         foregroundColor: Colors.white,
-        title: const Text('Formulaire de Signalement'),
+        title: const Text('DÉNONCER', style: TextStyle(letterSpacing: 0.5, fontWeight: FontWeight.bold)),
         actions: [
           TextButton.icon(
             onPressed: _safeExit,
@@ -104,7 +107,7 @@ class _ReportWizardScreenState extends State<ReportWizardScreen> {
         child: Column(
           children: [
             _HeaderSubtitle(),
-            _StepIndicator(current: _step, total: 5),
+            _StepperBar(current: _step, total: 5),
             const SizedBox(height: 8),
             Expanded(
               child: Form(
@@ -178,27 +181,45 @@ class _HeaderSubtitle extends StatelessWidget {
   }
 }
 
-class _StepIndicator extends StatelessWidget {
-  final int current;
+class _StepperBar extends StatelessWidget {
+  final int current; // 0-based
   final int total;
-  const _StepIndicator({required this.current, required this.total});
+  const _StepperBar({required this.current, required this.total});
   @override
   Widget build(BuildContext context) {
+    const green = Color(0xFF4CAF50);
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
-        children: List.generate(total, (i) {
-          final active = i <= current;
-          return Expanded(
-            child: Container(
-              height: 6,
-              margin: EdgeInsets.only(right: i == total - 1 ? 0 : 6),
-              decoration: BoxDecoration(
-                color: active ? const Color(0xFF4CAF50) : Colors.grey[300],
-                borderRadius: BorderRadius.circular(8),
+        children: List.generate(total * 2 - 1, (i) {
+          if (i.isOdd) {
+            // connector
+            final idx = (i - 1) ~/ 2;
+            final active = idx < current;
+            return Expanded(
+              child: Container(
+                height: 4,
+                color: active ? green.withOpacity(0.7) : Colors.grey.shade300,
               ),
-            ),
-          );
+            );
+          } else {
+            final stepIndex = i ~/ 2; // 0..total-1
+            final isActive = stepIndex == current;
+            final isDone = stepIndex < current;
+            final bg = isActive ? green : (isDone ? green.withOpacity(0.5) : Colors.white);
+            final fg = isActive ? Colors.white : (isDone ? Colors.white : Colors.grey.shade600);
+            return Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: bg,
+                shape: BoxShape.circle,
+                border: Border.all(color: isActive || isDone ? green : Colors.grey.shade400),
+              ),
+              alignment: Alignment.center,
+              child: Text('${stepIndex + 1}', style: TextStyle(color: fg, fontWeight: FontWeight.w600)),
+            );
+          }
         }),
       ),
     );
@@ -271,34 +292,45 @@ class _Step1Identification extends StatelessWidget {
           const Text('Étape 1 : Identification du signalement',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
           const SizedBox(height: 16),
-          const Text('Type de signalement'),
+          const Text('Type de dénonciation'),
           const SizedBox(height: 6),
           Row(children: [
             Expanded(
-              child: RadioListTile<bool>(
-                value: true,
-                groupValue: data.anonymous,
-                onChanged: (v) => onChanged(data.copyWith(anonymous: v)),
-                title: const Text('Anonyme'),
+              child: _SelectTile(
+                label: 'Anonyme',
+                selected: data.anonymous == true,
+                onTap: () => onChanged(data.copyWith(anonymous: true)),
               ),
             ),
+            const SizedBox(width: 12),
             Expanded(
-              child: RadioListTile<bool>(
-                value: false,
-                groupValue: data.anonymous,
-                onChanged: (v) => onChanged(data.copyWith(anonymous: v)),
-                title: const Text('Nominal'),
+              child: _SelectTile(
+                label: 'Nominal',
+                selected: data.anonymous == false,
+                onTap: () => onChanged(data.copyWith(anonymous: false)),
               ),
             ),
           ]),
           const SizedBox(height: 12),
-          const Text('Votre rôle dans cette situation'),
-          ...ReporterRole.values.map((r) => RadioListTile<ReporterRole>(
-                value: r,
-                groupValue: data.reporterRole,
-                onChanged: (v) => onChanged(data.copyWith(reporterRole: v)),
-                title: Text(_rLabel(r)),
-              )),
+          const Text('Vous dénoncez en tant que :'),
+          const SizedBox(height: 6),
+          _SelectTile(
+            label: _rLabel(ReporterRole.victim),
+            selected: data.reporterRole == ReporterRole.victim,
+            onTap: () => onChanged(data.copyWith(reporterRole: ReporterRole.victim)),
+          ),
+          const SizedBox(height: 8),
+          _SelectTile(
+            label: _rLabel(ReporterRole.witness),
+            selected: data.reporterRole == ReporterRole.witness,
+            onTap: () => onChanged(data.copyWith(reporterRole: ReporterRole.witness)),
+          ),
+          const SizedBox(height: 8),
+          _SelectTile(
+            label: _rLabel(ReporterRole.concerned),
+            selected: data.reporterRole == ReporterRole.concerned,
+            onTap: () => onChanged(data.copyWith(reporterRole: ReporterRole.concerned)),
+          ),
           const SizedBox(height: 12),
           Row(
             children: [
@@ -311,12 +343,13 @@ class _Step1Identification extends StatelessWidget {
             ],
           ),
           Wrap(
-            spacing: 8,
+            spacing: 10,
+            runSpacing: 10,
             children: Urgency.values
-                .map((u) => ChoiceChip(
-                      label: Text(_uLabel(u)),
+                .map((u) => _PillOption(
+                      label: _uLabel(u),
                       selected: data.urgency == u,
-                      onSelected: (_) => onChanged(data.copyWith(urgency: u)),
+                      onTap: () => onChanged(data.copyWith(urgency: u)),
                     ))
                 .toList(),
           ),
@@ -324,18 +357,19 @@ class _Step1Identification extends StatelessWidget {
           const Text('Type(s) de violence (multi-sélection)'),
           const SizedBox(height: 6),
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: 10,
+            runSpacing: 10,
             children: ViolenceType.values.map((t) {
               final selected = data.violenceTypes.contains(t);
-              return FilterChip(
-                label: Text(_vLabel(t)),
+              return _PillOption(
+                label: _vLabel(t),
                 selected: selected,
-                onSelected: (_) {
+                onTap: () {
                   final set = {...data.violenceTypes};
                   selected ? set.remove(t) : set.add(t);
                   onChanged(data.copyWith(violenceTypes: set));
                 },
+                multi: true,
               );
             }).toList(),
           ),
@@ -409,33 +443,35 @@ class _Step2PersonsAndIncident extends StatefulWidget {
 class _Step2PersonsAndIncidentState extends State<_Step2PersonsAndIncident> {
   final _reporterCtrl = TextEditingController();
   final _victimCtrl = TextEditingController();
-  final _nationalityCtrl = TextEditingController();
-  final _provinceCtrl = TextEditingController();
-  final _communeCtrl = TextEditingController();
-  final _quartierCtrl = TextEditingController();
+  final _addressCtrl = TextEditingController();
   final _descriptionCtrl = TextEditingController();
+
+  // Audio description (optional)
+  final FlutterSoundRecorder _recorder = FlutterSoundRecorder();
+  bool _recorderReady = false;
+  bool _isRecording = false;
 
   @override
   void initState() {
     super.initState();
     _reporterCtrl.text = widget.data.reporterName ?? '';
     _victimCtrl.text = widget.data.victimName ?? '';
-    _nationalityCtrl.text = widget.data.nationality ?? '';
-    _provinceCtrl.text = widget.data.province ?? '';
-    _communeCtrl.text = widget.data.commune ?? '';
-    _quartierCtrl.text = widget.data.quartier ?? '';
+    _addressCtrl.text = widget.data.addressLine ?? '';
     _descriptionCtrl.text = widget.data.descriptionText ?? '';
+
+    _initRecorder();
   }
 
   @override
   void dispose() {
     _reporterCtrl.dispose();
     _victimCtrl.dispose();
-    _nationalityCtrl.dispose();
-    _provinceCtrl.dispose();
-    _communeCtrl.dispose();
-    _quartierCtrl.dispose();
     _descriptionCtrl.dispose();
+    _addressCtrl.dispose();
+    // Close recorder
+    if (_recorderReady) {
+      _recorder.closeRecorder();
+    }
     super.dispose();
   }
 
@@ -492,69 +528,79 @@ class _Step2PersonsAndIncidentState extends State<_Step2PersonsAndIncident> {
           ),
           const SizedBox(height: 12),
           const Text('Sexe de la victime'),
-          Row(children: [
-            Expanded(child: RadioListTile<Sex>(value: Sex.female, groupValue: d.victimSex, onChanged: (v) => widget.onChanged(d.copyWith(victimSex: v)), title: const Text('Féminin'))),
-            Expanded(child: RadioListTile<Sex>(value: Sex.male, groupValue: d.victimSex, onChanged: (v) => widget.onChanged(d.copyWith(victimSex: v)), title: const Text('Masculin'))),
-          ]),
-          const SizedBox(height: 12),
-          const Text('Nationalité (facultatif)'),
-          TextFormField(
-            controller: _nationalityCtrl,
-            onChanged: (v) => widget.onChanged(d.copyWith(nationality: v.isEmpty ? null : v)),
-            decoration: const InputDecoration(hintText: 'Ex: RD Congo'),
-          ),
-          const SizedBox(height: 16),
-          const Text('Informations sur l’incident'),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            children: IncidentPlace.values
-                .map((p) => ChoiceChip(
-                      label: Text(_placeLabel(p)),
-                      selected: d.incidentPlace == p,
-                      onSelected: (_) => widget.onChanged(d.copyWith(incidentPlace: p)),
-                    ))
-                .toList(),
-          ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 6),
           Row(children: [
             Expanded(
-              child: TextFormField(
-                controller: _provinceCtrl,
-                decoration: const InputDecoration(labelText: 'Province'),
-                onChanged: (v) => widget.onChanged(d.copyWith(province: v)),
+              child: _SelectTile(
+                label: 'Féminin',
+                selected: d.victimSex == Sex.female,
+                onTap: () => widget.onChanged(d.copyWith(victimSex: Sex.female)),
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: TextFormField(
-                controller: _communeCtrl,
-                decoration: const InputDecoration(labelText: 'Commune'),
-                onChanged: (v) => widget.onChanged(d.copyWith(commune: v)),
+              child: _SelectTile(
+                label: 'Masculin',
+                selected: d.victimSex == Sex.male,
+                onTap: () => widget.onChanged(d.copyWith(victimSex: Sex.male)),
               ),
             ),
           ]),
           const SizedBox(height: 12),
+          const Text('Adresse de l’incident (une ligne)'),
           TextFormField(
-            controller: _quartierCtrl,
-            decoration: const InputDecoration(labelText: 'Quartier'),
-            onChanged: (v) => widget.onChanged(d.copyWith(quartier: v)),
+            controller: _addressCtrl,
+            decoration: InputDecoration(
+              labelText: 'Adresse',
+              hintText: 'Saisissez l’adresse (ex: Avenue X, Commune Y)'.trim(),
+              suffixIcon: Tooltip(
+                message: 'Envoyer ma position',
+                child: IconButton(
+                  icon: const Icon(Icons.my_location_outlined),
+                  onPressed: _onSendMyLocation,
+                ),
+              ),
+            ),
+            onChanged: (v) => widget.onChanged(d.copyWith(addressLine: v.isEmpty ? null : v)),
           ),
+          if (d.latitude != null && d.longitude != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              'Position ajoutée: (${d.latitude!.toStringAsFixed(5)}, ${d.longitude!.toStringAsFixed(5)})',
+              style: const TextStyle(color: Colors.grey),
+            ),
+          ],
           const SizedBox(height: 12),
+          const Text('Description de l’incident'),
+          const SizedBox(height: 6),
           TextFormField(
             controller: _descriptionCtrl,
             maxLines: 5,
             decoration: const InputDecoration(
-              labelText: 'Description libre (écrite)',
+              hintText: 'Décrivez ce qui s’est passé (facultatif si audio ajouté)',
               alignLabelWithHint: true,
             ),
-            onChanged: (v) => widget.onChanged(d.copyWith(descriptionText: v)),
+            onChanged: (v) => widget.onChanged(d.copyWith(descriptionText: v.isEmpty ? null : v)),
           ),
           const SizedBox(height: 8),
-          Text(
-            '💡 Vous pouvez enregistrer un message vocal si vous préférez ne pas écrire.' + (kIsWeb ? ' (enregistrement vocal non disponible sur le web dans cette version)' : ''),
-            style: const TextStyle(color: Colors.grey),
+          Row(
+            children: [
+              OutlinedButton.icon(
+                onPressed: (!_recorderReady || kIsWeb) ? null : _toggleRecord,
+                icon: Icon(_isRecording ? Icons.stop_circle_outlined : Icons.mic_none),
+                label: Text(_isRecording ? 'Arrêter' : 'Enregistrer un audio'),
+              ),
+              const SizedBox(width: 12),
+              if (d.descriptionAudioPath != null)
+                const Text('Audio ajouté', style: TextStyle(color: Colors.grey)),
+            ],
           ),
+          const SizedBox(height: 6),
+          if (kIsWeb)
+            const Text(
+              'ℹ️ L’enregistrement audio natif n’est pas activé sur le web dans cette version. Utilisez le texte.',
+              style: TextStyle(color: Colors.grey),
+            ),
         ],
       ),
     );
@@ -569,12 +615,76 @@ class _Step2PersonsAndIncidentState extends State<_Step2PersonsAndIncident> {
         AgeGroup.a36_50 => '36–50',
         AgeGroup.a50plus => '50+',
       };
-  static String _placeLabel(IncidentPlace p) => switch (p) {
-        IncidentPlace.home => 'Domicile',
-        IncidentPlace.work => 'Travail',
-        IncidentPlace.publicSpace => 'Espace public',
-        IncidentPlace.other => 'Autre',
-      };
+
+  Future<void> _initRecorder() async {
+    try {
+      if (!kIsWeb) {
+        final status = await Permission.microphone.request();
+        if (!status.isGranted) {
+          setState(() => _recorderReady = false);
+          return;
+        }
+      }
+      await _recorder.openRecorder();
+      setState(() => _recorderReady = true);
+    } catch (_) {
+      setState(() => _recorderReady = false);
+    }
+  }
+
+  Future<void> _toggleRecord() async {
+    if (!_recorderReady) return;
+    if (_isRecording) {
+      final path = await _recorder.stopRecorder();
+      setState(() => _isRecording = false);
+      if (path != null && mounted) {
+        final d = widget.data.copyWith(descriptionAudioPath: path);
+        widget.onChanged(d);
+      }
+      return;
+    }
+    // Start recording
+    try {
+      await _recorder.startRecorder(toFile: 'desc_${DateTime.now().millisecondsSinceEpoch}.m4a');
+      setState(() => _isRecording = true);
+    } catch (_) {
+      setState(() => _isRecording = false);
+    }
+  }
+
+  Future<void> _onSendMyLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        // Silently ignore if disabled to keep it "hidden"/non-intrusive
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          return; // user denied
+        }
+      }
+      if (permission == LocationPermission.deniedForever) {
+        return; // cannot request
+      }
+
+      final pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.best);
+      if (!mounted) return;
+      final d = widget.data.copyWith(latitude: pos.latitude, longitude: pos.longitude);
+      widget.onChanged(d);
+      // Optionally provide a subtle feedback
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Position ajoutée'), duration: Duration(seconds: 2)),
+        );
+      }
+    } catch (_) {
+      // ignore silently for now
+    }
+  }
 }
 
 // ------------------- Step 3 -------------------
@@ -599,18 +709,19 @@ class _Step3Needs extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: 10,
+            runSpacing: 10,
             children: NeedType.values.map((n) {
               final selected = data.needs.contains(n);
-              return FilterChip(
-                label: Text(_nLabel(n)),
+              return _PillOption(
+                label: _nLabel(n),
                 selected: selected,
-                onSelected: (_) {
+                onTap: () {
                   final set = {...data.needs};
                   selected ? set.remove(n) : set.add(n);
                   onChanged(data.copyWith(needs: set));
                 },
+                multi: true,
               );
             }).toList(),
           ),
@@ -723,24 +834,26 @@ class _Step4EvidenceAndContactState extends State<_Step4EvidenceAndContact> {
           const SizedBox(height: 12),
           const Text('Préférence de contact'),
           Wrap(
-            spacing: 8,
+            spacing: 10,
+            runSpacing: 10,
             children: ContactPref.values
-                .map((c) => ChoiceChip(
-                      label: Text(_cLabel(c)),
+                .map((c) => _PillOption(
+                      label: _cLabel(c),
                       selected: d.contactPref == c,
-                      onSelected: (_) => widget.onChanged(d.copyWith(contactPref: c)),
+                      onTap: () => widget.onChanged(d.copyWith(contactPref: c)),
                     ))
                 .toList(),
           ),
           const SizedBox(height: 12),
           const Text('Horaires préférés'),
           Wrap(
-            spacing: 8,
+            spacing: 10,
+            runSpacing: 10,
             children: TimePref.values
-                .map((t) => ChoiceChip(
-                      label: Text(_tLabel(t)),
+                .map((t) => _PillOption(
+                      label: _tLabel(t),
                       selected: d.timePref == t,
-                      onSelected: (_) => widget.onChanged(d.copyWith(timePref: t)),
+                      onTap: () => widget.onChanged(d.copyWith(timePref: t)),
                     ))
                 .toList(),
           ),
@@ -797,9 +910,10 @@ class _Step5Review extends StatelessWidget {
         _reviewTile('Victime', data.victimName ?? '—'),
         _reviewTile('Âge', _ageToText(data.victimAgeGroup)),
         _reviewTile('Sexe', _sexToText(data.victimSex)),
-        _reviewTile('Nationalité', data.nationality ?? '—'),
-        _reviewTile('Lieu', _placeToText(data.incidentPlace)),
-        _reviewTile('Adresse', [data.province, data.commune, data.quartier].where((e) => (e ?? '').isNotEmpty).join(', ')),
+        _reviewTile('Adresse', data.addressLine ?? '—'),
+        if (data.latitude != null && data.longitude != null)
+          _reviewTile('Position GPS',
+              'Lat ${data.latitude!.toStringAsFixed(5)}, Lng ${data.longitude!.toStringAsFixed(5)}'),
         const Divider(),
         _reviewTile('Besoins', data.needs.isEmpty ? '—' : data.needs.map(_needToText).join(', ')),
         const Divider(),
@@ -831,8 +945,104 @@ class _Step5Review extends StatelessWidget {
   String _violToText(ViolenceType v) => _Step1Identification._vLabel(v);
   String _ageToText(AgeGroup? a) => _Step2PersonsAndIncidentState._ageLabel(a ?? AgeGroup.a18_25);
   String _sexToText(Sex? s) => switch (s) { Sex.female => 'Féminin', Sex.male => 'Masculin', null => '—' };
-  String _placeToText(IncidentPlace? p) => _Step2PersonsAndIncidentState._placeLabel(p ?? IncidentPlace.home);
   String _needToText(NeedType n) => _Step3Needs._nLabel(n);
   String _contactToText(ContactPref c) => _Step4EvidenceAndContactState._cLabel(c);
   String _timeToText(TimePref? t) => t == null ? '—' : _Step4EvidenceAndContactState._tLabel(t);
+}
+
+// ------------------- Reusable styled widgets -------------------
+class _SelectTile extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  const _SelectTile({required this.label, required this.selected, required this.onTap});
+  @override
+  Widget build(BuildContext context) {
+    const green = Color(0xFF4CAF50);
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFFE8F5E8) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: selected ? green : Colors.grey.shade300),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: selected ? const Color(0xFF2E7D32) : Colors.black87,
+                ),
+              ),
+            ),
+            Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: selected ? green : Colors.transparent,
+                border: Border.all(color: selected ? green : Colors.grey.shade400),
+              ),
+              child: selected
+                  ? const Icon(Icons.check, size: 16, color: Colors.white)
+                  : null,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PillOption extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  final bool multi;
+  const _PillOption({required this.label, required this.selected, required this.onTap, this.multi = false});
+  @override
+  Widget build(BuildContext context) {
+    const green = Color(0xFF4CAF50);
+    final bg = selected ? const Color(0xFFE8F5E8) : Colors.white;
+    final border = selected ? green : Colors.grey.shade300;
+    final textColor = selected ? const Color(0xFF2E7D32) : Colors.black87;
+    return InkWell(
+      borderRadius: BorderRadius.circular(24),
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: border),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (multi)
+              Container(
+                width: 18,
+                height: 18,
+                alignment: Alignment.center,
+                margin: const EdgeInsets.only(right: 8),
+                decoration: BoxDecoration(
+                  color: selected ? green : Colors.transparent,
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: selected ? green : Colors.grey.shade400),
+                ),
+                child: selected ? const Icon(Icons.check, size: 14, color: Colors.white) : null,
+              ),
+            Text(label, style: TextStyle(color: textColor, fontWeight: FontWeight.w600)),
+          ],
+        ),
+      ),
+    );
+  }
 }

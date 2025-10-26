@@ -39,6 +39,7 @@ dependencies:
   # Audio
   flutter_sound: ^9.2.13
   permission_handler: ^11.1.0
+  geolocator: ^12.0.0
 
   # Image et fichiers
   image_picker: ^1.0.7

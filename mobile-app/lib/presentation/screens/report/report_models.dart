@@ -15,7 +15,6 @@ enum ViolenceType {
 
 enum AgeGroup { a0_5, a6_12, a13_17, a18_25, a26_35, a36_50, a50plus }
 enum Sex { female, male }
-enum IncidentPlace { home, work, publicSpace, other }
 enum Frequency { first, repeated, chronic }
 enum Relation {
   partner,
@@ -51,14 +50,11 @@ class ReportFormData {
   // Victim details
   final AgeGroup? victimAgeGroup;
   final Sex? victimSex;
-  final String? nationality;
+  // Nationalité supprimée sur demande
 
   // Incident details
   final DateTime? incidentDate;
-  final IncidentPlace? incidentPlace;
-  final String? province;
-  final String? commune;
-  final String? quartier;
+  final String? addressLine; // Adresse saisie libre
   final double? latitude;
   final double? longitude;
   final Frequency? frequency;
@@ -89,13 +85,9 @@ class ReportFormData {
     this.reporterName,
     this.victimName,
     this.victimAgeGroup,
-    this.victimSex,
-    this.nationality,
+  this.victimSex,
     this.incidentDate,
-    this.incidentPlace,
-    this.province,
-    this.commune,
-    this.quartier,
+  this.addressLine,
     this.latitude,
     this.longitude,
     this.frequency,
@@ -122,12 +114,9 @@ class ReportFormData {
     String? victimName,
     AgeGroup? victimAgeGroup,
     Sex? victimSex,
-    String? nationality,
+  String? nationality,
     DateTime? incidentDate,
-    IncidentPlace? incidentPlace,
-    String? province,
-    String? commune,
-    String? quartier,
+  String? addressLine,
     double? latitude,
     double? longitude,
     Frequency? frequency,
@@ -153,12 +142,9 @@ class ReportFormData {
       victimName: victimName ?? this.victimName,
       victimAgeGroup: victimAgeGroup ?? this.victimAgeGroup,
       victimSex: victimSex ?? this.victimSex,
-      nationality: nationality ?? this.nationality,
+  // nationality removed
       incidentDate: incidentDate ?? this.incidentDate,
-      incidentPlace: incidentPlace ?? this.incidentPlace,
-      province: province ?? this.province,
-      commune: commune ?? this.commune,
-      quartier: quartier ?? this.quartier,
+  addressLine: addressLine ?? this.addressLine,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
       frequency: frequency ?? this.frequency,
