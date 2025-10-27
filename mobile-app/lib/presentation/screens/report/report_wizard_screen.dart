@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
@@ -451,6 +452,11 @@ class _Step2PersonsAndIncidentState extends State<_Step2PersonsAndIncident> {
   bool _recorderReady = false;
   bool _isRecording = false;
   bool _gpsSuccess = false;
+  int _secondsLeft = 0; // countdown while recording
+  Timer? _timer;
+  final FlutterSoundPlayer _player = FlutterSoundPlayer();
+  bool _playerReady = false;
+  bool _isPlaying = false;
 
   @override
   void initState() {
@@ -460,7 +466,8 @@ class _Step2PersonsAndIncidentState extends State<_Step2PersonsAndIncident> {
     _addressCtrl.text = widget.data.addressLine ?? '';
     _descriptionCtrl.text = widget.data.descriptionText ?? '';
 
-    _initRecorder();
+  _initRecorder();
+  _initPlayer();
   }
 
   @override
@@ -473,6 +480,10 @@ class _Step2PersonsAndIncidentState extends State<_Step2PersonsAndIncident> {
     if (_recorderReady) {
       _recorder.closeRecorder();
     }
+    if (_playerReady) {
+      _player.closePlayer();
+    }
+    _timer?.cancel();
     super.dispose();
   }
 
@@ -549,40 +560,28 @@ class _Step2PersonsAndIncidentState extends State<_Step2PersonsAndIncident> {
           ]),
           const SizedBox(height: 12),
           const Text('Adresse de l’incident (une ligne)'),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: TextFormField(
-                  controller: _addressCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Adresse',
-                    hintText: 'Saisissez l’adresse (ex: Avenue X, Commune Y)',
-                  ),
-                  onChanged: (v) => widget.onChanged(d.copyWith(addressLine: v.isEmpty ? null : v)),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  OutlinedButton.icon(
-                    onPressed: _onSendMyLocation,
-                    icon: const Icon(Icons.my_location_outlined),
-                    label: const Text('Envoyer ma position'),
-                  ),
-                  if (_gpsSuccess)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 6),
-                      child: Text(
-                        'Position recuperée avec succès',
-                        style: TextStyle(color: Color(0xFF2E7D32), fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                ],
-              ),
-            ],
+          TextFormField(
+            controller: _addressCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Adresse',
+              hintText: 'Saisissez l’adresse (ex: Avenue X, Commune Y)',
+            ),
+            onChanged: (v) => widget.onChanged(d.copyWith(addressLine: v.isEmpty ? null : v)),
           ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: _onSendMyLocation,
+            icon: const Icon(Icons.my_location_outlined),
+            label: const Text('Envoyer ma position'),
+          ),
+          if (_gpsSuccess)
+            const Padding(
+              padding: EdgeInsets.only(top: 6),
+              child: Text(
+                'Position recuperée avec succès',
+                style: TextStyle(color: Color(0xFF2E7D32), fontWeight: FontWeight.w600),
+              ),
+            ),
           const SizedBox(height: 12),
           const Text('Description de l’incident'),
           const SizedBox(height: 6),
@@ -596,18 +595,7 @@ class _Step2PersonsAndIncidentState extends State<_Step2PersonsAndIncident> {
             onChanged: (v) => widget.onChanged(d.copyWith(descriptionText: v.isEmpty ? null : v)),
           ),
           const SizedBox(height: 8),
-          Row(
-            children: [
-              OutlinedButton.icon(
-                onPressed: (!_recorderReady || kIsWeb) ? null : _toggleRecord,
-                icon: Icon(_isRecording ? Icons.stop_circle_outlined : Icons.mic_none),
-                label: Text(_isRecording ? 'Arrêter' : 'Enregistrer un audio'),
-              ),
-              const SizedBox(width: 12),
-              if (d.descriptionAudioPath != null)
-                const Text('Audio ajouté', style: TextStyle(color: Colors.grey)),
-            ],
-          ),
+          _buildAudioControls(d),
           const SizedBox(height: 6),
           if (kIsWeb)
             const Text(
@@ -645,24 +633,134 @@ class _Step2PersonsAndIncidentState extends State<_Step2PersonsAndIncident> {
     }
   }
 
-  Future<void> _toggleRecord() async {
-    if (!_recorderReady) return;
-    if (_isRecording) {
-      final path = await _recorder.stopRecorder();
-      setState(() => _isRecording = false);
-      if (path != null && mounted) {
-        final d = widget.data.copyWith(descriptionAudioPath: path);
-        widget.onChanged(d);
-      }
-      return;
+  Future<void> _initPlayer() async {
+    try {
+      await _player.openPlayer();
+      setState(() => _playerReady = true);
+    } catch (_) {
+      setState(() => _playerReady = false);
     }
-    // Start recording
+  }
+
+  void _startCountdown() {
+    _timer?.cancel();
+    setState(() => _secondsLeft = 180);
+    _timer = Timer.periodic(const Duration(seconds: 1), (t) async {
+      if (_secondsLeft <= 1) {
+        t.cancel();
+        await _stopRecording(save: true);
+      } else {
+        setState(() => _secondsLeft -= 1);
+      }
+    });
+  }
+
+  String _fmt(int s) {
+    final m = (s ~/ 60).toString().padLeft(1, '0');
+    final ss = (s % 60).toString().padLeft(2, '0');
+    return '$m:$ss';
+  }
+
+  Future<void> _startRecording() async {
+    if (!_recorderReady) return;
     try {
       await _recorder.startRecorder(toFile: 'desc_${DateTime.now().millisecondsSinceEpoch}.m4a');
       setState(() => _isRecording = true);
+      _startCountdown();
     } catch (_) {
       setState(() => _isRecording = false);
     }
+  }
+
+  Future<void> _stopRecording({bool save = true}) async {
+    if (!_recorderReady) return;
+    try {
+      final path = await _recorder.stopRecorder();
+      _timer?.cancel();
+      setState(() => _isRecording = false);
+      if (save && path != null && mounted) {
+        widget.onChanged(widget.data.copyWith(descriptionAudioPath: path));
+      }
+    } catch (_) {
+      setState(() => _isRecording = false);
+    }
+  }
+
+  Future<void> _togglePlay() async {
+    if (!_playerReady) return;
+    if (_isPlaying) {
+      await _player.stopPlayer();
+      setState(() => _isPlaying = false);
+      return;
+    }
+    final path = widget.data.descriptionAudioPath;
+    if (path == null) return;
+    await _player.startPlayer(fromURI: path, whenFinished: () {
+      if (mounted) setState(() => _isPlaying = false);
+    });
+    setState(() => _isPlaying = true);
+  }
+
+  void _deleteAudio() {
+    _timer?.cancel();
+    setState(() {
+      _isRecording = false;
+      _secondsLeft = 0;
+      _isPlaying = false;
+    });
+    widget.onChanged(widget.data.copyWith(descriptionAudioPath: null));
+  }
+
+  Widget _buildAudioControls(ReportFormData d) {
+    final hasAudio = d.descriptionAudioPath != null;
+    return Row(
+      children: [
+        // Round red record/pause button
+        InkWell(
+          onTap: () async {
+            if (_isRecording) {
+              await _stopRecording(save: true);
+            } else {
+              await _startRecording();
+            }
+          },
+          borderRadius: BorderRadius.circular(28),
+          child: Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: _isRecording ? Colors.orange : Colors.red,
+              shape: BoxShape.circle,
+            ),
+            alignment: Alignment.center,
+            child: Icon(_isRecording ? Icons.pause : Icons.mic, color: Colors.white),
+          ),
+        ),
+        const SizedBox(width: 12),
+        // Label and countdown
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(_isRecording ? 'Enregistrement en cours' : (hasAudio ? 'Reprendre' : 'Enregistrer un audio')),
+            if (_isRecording)
+              Text(_fmt(_secondsLeft), style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.red)),
+          ],
+        ),
+        const SizedBox(width: 12),
+        if (hasAudio) ...[
+          IconButton(
+            onPressed: _togglePlay,
+            icon: Icon(_isPlaying ? Icons.stop : Icons.play_arrow),
+            tooltip: _isPlaying ? 'Stop' : 'Lire',
+          ),
+          IconButton(
+            onPressed: _deleteAudio,
+            icon: const Icon(Icons.delete_outline),
+            tooltip: 'Supprimer',
+          ),
+        ],
+      ],
+    );
   }
 
   Future<void> _onSendMyLocation() async {
@@ -804,31 +902,13 @@ class _Step4EvidenceAndContactState extends State<_Step4EvidenceAndContact> {
                 icon: const Icon(Icons.image_outlined),
                 label: Text('Photos (${d.photoPaths.length}/5)'),
               ),
+              // Only keep Photos and Audio per request
               OutlinedButton.icon(
                 onPressed: () async {
-                  // TODO: Integrate audio recording / picker (max 2 min)
                   widget.onChanged(d.copyWith(audioPath: d.audioPath ?? 'audio_note.m4a'));
                 },
                 icon: const Icon(Icons.mic_none),
                 label: Text(d.audioPath == null ? 'Audio (optionnel)' : 'Audio ajouté'),
-              ),
-              OutlinedButton.icon(
-                onPressed: () async {
-                  final list = [...d.documentPaths];
-                  list.add('document_${list.length + 1}.pdf');
-                  widget.onChanged(d.copyWith(documentPaths: list));
-                },
-                icon: const Icon(Icons.picture_as_pdf_outlined),
-                label: Text('Documents (${d.documentPaths.length})'),
-              ),
-              OutlinedButton.icon(
-                onPressed: () async {
-                  final list = [...d.screenshotPaths];
-                  list.add('capture_${list.length + 1}.png');
-                  widget.onChanged(d.copyWith(screenshotPaths: list));
-                },
-                icon: const Icon(Icons.screenshot_monitor_outlined),
-                label: Text('Captures (${d.screenshotPaths.length})'),
               ),
             ],
           ),
@@ -838,21 +918,30 @@ class _Step4EvidenceAndContactState extends State<_Step4EvidenceAndContact> {
           TextFormField(
             controller: _phoneCtrl,
             keyboardType: TextInputType.phone,
-            decoration: const InputDecoration(labelText: 'Numéro de contact'),
+            decoration: const InputDecoration(
+              labelText: 'Numéro de contact',
+              hintText: 'Ex: +243 99 123 45 67',
+            ),
             onChanged: (v) => widget.onChanged(d.copyWith(contactNumber: v)),
           ),
           const SizedBox(height: 12),
-          const Text('Préférence de contact'),
+          const Text('Préférences de contact (multi-sélection)'),
           Wrap(
             spacing: 10,
             runSpacing: 10,
-            children: ContactPref.values
-                .map((c) => _PillOption(
-                      label: _cLabel(c),
-                      selected: d.contactPref == c,
-                      onTap: () => widget.onChanged(d.copyWith(contactPref: c)),
-                    ))
-                .toList(),
+            children: ContactPref.values.map((c) {
+              final selected = d.contactPrefs.contains(c);
+              return _PillOption(
+                label: _cLabel(c),
+                selected: selected,
+                onTap: () {
+                  final set = {...d.contactPrefs};
+                  selected ? set.remove(c) : set.add(c);
+                  widget.onChanged(d.copyWith(contactPrefs: set));
+                },
+                multi: true,
+              );
+            }).toList(),
           ),
           const SizedBox(height: 12),
           const Text('Horaires préférés'),
@@ -928,7 +1017,12 @@ class _Step5Review extends StatelessWidget {
         _reviewTile('Besoins', data.needs.isEmpty ? '—' : data.needs.map(_needToText).join(', ')),
         const Divider(),
         _reviewTile('Contact', data.contactNumber ?? '—'),
-        _reviewTile('Préférence', _contactToText(data.contactPref)),
+        _reviewTile(
+          'Préférences',
+          data.contactPrefs.isEmpty
+              ? '—'
+              : data.contactPrefs.map(_contactToText).join(', '),
+        ),
         _reviewTile('Horaire', _timeToText(data.timePref)),
       ],
     );

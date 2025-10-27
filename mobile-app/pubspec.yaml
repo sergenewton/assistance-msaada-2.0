@@ -31,7 +31,7 @@ dependencies:
   # Notifications (Firebase temporairement désactivé)
   # firebase_core: ^2.24.2
   # firebase_messaging: ^14.7.9
-  flutter_local_notifications: ^16.3.0
+  flutter_local_notifications: ^19.0.0
 
   # Chat et communication
   socket_io_client: ^2.0.3
@@ -43,7 +43,7 @@ dependencies:
 
   # Image et fichiers
   image_picker: ^1.0.7
-  file_picker: ^6.1.1
+  file_picker: ^8.0.6
   cached_network_image: ^3.3.1
 
   # Chiffrement

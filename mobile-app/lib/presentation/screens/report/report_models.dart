@@ -73,7 +73,7 @@ class ReportFormData {
 
   // Contact
   final String? contactNumber;
-  final ContactPref contactPref;
+  final Set<ContactPref> contactPrefs; // multi-select
   final TimePref? timePref;
   final String? securityCode;
 
@@ -100,7 +100,7 @@ class ReportFormData {
     this.documentPaths = const [],
     this.screenshotPaths = const [],
     this.contactNumber,
-    this.contactPref = ContactPref.sms,
+    this.contactPrefs = const {},
     this.timePref,
     this.securityCode,
   });
@@ -128,7 +128,7 @@ class ReportFormData {
     List<String>? documentPaths,
     List<String>? screenshotPaths,
     String? contactNumber,
-    ContactPref? contactPref,
+    Set<ContactPref>? contactPrefs,
     TimePref? timePref,
     String? securityCode,
   }) {
@@ -156,7 +156,7 @@ class ReportFormData {
       documentPaths: documentPaths ?? this.documentPaths,
       screenshotPaths: screenshotPaths ?? this.screenshotPaths,
       contactNumber: contactNumber ?? this.contactNumber,
-      contactPref: contactPref ?? this.contactPref,
+      contactPrefs: contactPrefs ?? this.contactPrefs,
       timePref: timePref ?? this.timePref,
       securityCode: securityCode ?? this.securityCode,
     );

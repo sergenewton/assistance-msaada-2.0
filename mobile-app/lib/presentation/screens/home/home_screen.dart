@@ -174,16 +174,7 @@ class HomeScreen extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: 12),
-                          Expanded(
-                            child: _buildQuickAccessCard(
-                              context,
-                              'Stories',
-                              Icons.favorite_border,
-                              const Color(0xFFFCE4EC),
-                              const Color(0xFFF06292),
-                              () {},
-                            ),
-                          ),
+                          // Stories removed per request
                         ],
                       ),
                     ),

@@ -45,5 +45,13 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+
+	<!-- Permissions for location and microphone -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Votre position permet de pré-remplir l’adresse de l’incident pour vous aider plus rapidement.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Votre position permet de pré-remplir l’adresse de l’incident pour vous aider plus rapidement.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Le micro est utilisé pour enregistrer une description audio de l’incident si vous le souhaitez.</string>
 </dict>
 </plist>
