@@ -19,6 +19,11 @@ class RouteConstants {
   static const String articleDetail = '/content/article';
   static const String videos = '/content/videos';
   static const String videoDetail = '/content/video';
+  static const String resources = '/content/resources';
+  static const String resourcesCategory = '/content/resources/:id';
+  
+  // Centers & Resources
+  static const String centers = '/centres';
   
   // Chat Routes
   static const String chat = '/chat';

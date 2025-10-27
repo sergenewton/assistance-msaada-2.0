@@ -159,7 +159,7 @@ class HomeScreen extends StatelessWidget {
                               Icons.location_on_outlined,
                               const Color(0xFF5FA2D7),
                               Colors.white,
-                              () {},
+                              () => context.push(RouteConstants.centers),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -200,6 +200,7 @@ class HomeScreen extends StatelessWidget {
                 'Guides et informations sur la VBG',
                 Icons.menu_book_outlined,
                 const Color(0xFF4CAF50),
+                onTap: () => context.push(RouteConstants.resources),
               ),
               const SizedBox(height: 12),
               _buildInfoCard(
@@ -349,15 +350,16 @@ class HomeScreen extends StatelessWidget {
     String subtitle,
     IconData icon,
     Color iconColor,
+    {VoidCallback? onTap}
   ) {
-    return Container(
+    final card = Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -368,7 +370,7 @@ class HomeScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.1),
+              color: iconColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
@@ -409,5 +411,6 @@ class HomeScreen extends StatelessWidget {
         ],
       ),
     );
+    return onTap == null ? card : InkWell(onTap: onTap, borderRadius: BorderRadius.circular(12), child: card);
   }
 }

@@ -3,6 +3,9 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/route_constants.dart';
 import '../screens/home/home_screen.dart';
 import '../screens/report/report_wizard_screen.dart';
+import '../screens/centers/aid_centers_screen.dart';
+import '../screens/resources/educational_resources_screen.dart';
+import '../screens/resources/resource_category_screen.dart';
 
 class AppRouter {
   static final GoRouter _router = GoRouter(
@@ -64,6 +67,25 @@ class AppRouter {
       ),
       
       // Content routes
+      GoRoute(
+        path: RouteConstants.resources,
+        name: 'resources',
+        builder: (context, state) => const EducationalResourcesScreen(),
+      ),
+      GoRoute(
+        path: RouteConstants.resourcesCategory,
+        name: 'resources-category',
+        builder: (context, state) {
+          final id = state.pathParameters['id'] ?? '';
+          return ResourceCategoryScreen(categoryId: id);
+        },
+      ),
+      GoRoute(
+        path: RouteConstants.centers,
+        name: 'centers',
+        builder: (context, state) => const AidCentersScreen(),
+      ),
+      
       GoRoute(
         path: RouteConstants.articles,
         name: 'articles',
@@ -164,6 +186,10 @@ class AppNavigation {
   
   static void goToVideos(BuildContext context) {
     context.push(RouteConstants.videos);
+  }
+  
+  static void goToCenters(BuildContext context) {
+    context.push(RouteConstants.centers);
   }
   
   static void goToSettings(BuildContext context) {
