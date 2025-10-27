@@ -146,8 +146,8 @@ class HomeScreen extends StatelessWidget {
                               context,
                               'Dénoncer',
                               Icons.phone_outlined,
-                              const Color(0xFFFFEBEE),
-                              const Color(0xFFE57373),
+                              const Color(0xFFEA9F1E),
+                              Colors.white,
                               () => context.push(RouteConstants.reportForm),
                             ),
                           ),
@@ -157,8 +157,8 @@ class HomeScreen extends StatelessWidget {
                               context,
                               'Centres',
                               Icons.location_on_outlined,
-                              const Color(0xFFE8F5E8),
-                              const Color(0xFF81C784),
+                              const Color(0xFF5FA2D7),
+                              Colors.white,
                               () {},
                             ),
                           ),
@@ -168,8 +168,8 @@ class HomeScreen extends StatelessWidget {
                               context,
                               'Sécurité',
                               Icons.shield_outlined,
-                              const Color(0xFFFFF8E1),
-                              const Color(0xFFFFB74D),
+                              const Color(0xFFC468D4),
+                              Colors.white,
                               () {},
                             ),
                           ),
@@ -275,6 +275,11 @@ class HomeScreen extends StatelessWidget {
         selectedItemColor: const Color(0xFF4CAF50),
         unselectedItemColor: Colors.grey,
         currentIndex: 0,
+        onTap: (index) {
+          if (index == 1) {
+            context.push(RouteConstants.reportForm);
+          }
+        },
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home_outlined),
@@ -318,17 +323,10 @@ class HomeScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                icon,
-                size: 32,
-                color: iconColor,
-              ),
+            Icon(
+              icon,
+              size: 36,
+              color: iconColor,
             ),
             const SizedBox(height: 12),
             Text(
@@ -336,7 +334,7 @@ class HomeScreen extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: Colors.black87,
+                color: Colors.white,
               ),
             ),
           ],

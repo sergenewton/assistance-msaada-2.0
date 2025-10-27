@@ -12,6 +12,7 @@ class RouteConstants {
   static const String reportVoice = '/report/voice';
   static const String myReports = '/report/my-reports';
   static const String reportDetail = '/report/detail';
+  static const String reportSuccess = '/report/success';
   
   // Content Routes
   static const String articles = '/content/articles';

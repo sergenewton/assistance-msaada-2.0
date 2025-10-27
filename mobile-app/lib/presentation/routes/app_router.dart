@@ -21,6 +21,17 @@ class AppRouter {
         name: 'report-form',
         builder: (context, state) => const ReportWizardScreen(),
       ),
+      GoRoute(
+        path: RouteConstants.reportSuccess,
+        name: 'report-success',
+        builder: (context, state) {
+          final tracking = state.uri.queryParameters['tracking'] ?? 'VBG-XXXX-XXXX';
+          return SubmissionSuccessScreen(
+            trackingNumber: tracking,
+            onExit: () => context.go(RouteConstants.home),
+          );
+        },
+      ),
       
       GoRoute(
         path: RouteConstants.reportChat,

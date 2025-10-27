@@ -7,6 +7,8 @@ import 'package:go_router/go_router.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_sound/flutter_sound.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import '../../../core/constants/route_constants.dart';
 import 'report_models.dart';
 
@@ -30,16 +32,30 @@ class _ReportWizardScreenState extends State<ReportWizardScreen> {
   }
 
   void _next() {
-    if (_formKeys[_step].currentState?.validate() ?? true) {
-      setState(() => _step = (_step + 1).clamp(0, 4));
+    final error = _validateStepData(_step, _data);
+    // Trigger field validators as well (for text fields when present)
+    _formKeys[_step].currentState?.validate();
+    if (error != null) {
+      _showStepError(error);
+      return;
     }
+    setState(() => _step = (_step + 1).clamp(0, 4));
   }
 
   void _back() => setState(() => _step = (_step - 1).clamp(0, 4));
 
   Future<void> _submit() async {
-    final valid = _formKeys[_step].currentState?.validate() ?? true;
-    if (!valid) return;
+    // Validate all steps before final submit
+    for (int i = 0; i < 4; i++) {
+      final err = _validateStepData(i, _data);
+      if (err != null) {
+        setState(() => _step = i);
+        // give form a chance to display validators
+        _formKeys[i].currentState?.validate();
+        _showStepError(err);
+        return;
+      }
+    }
     setState(() => _submitting = true);
     await Future.delayed(const Duration(milliseconds: 900));
     setState(() => _submitting = false);
@@ -48,44 +64,49 @@ class _ReportWizardScreenState extends State<ReportWizardScreen> {
     final tracking = 'VBG-$n1-$n2';
 
     if (!mounted) return;
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Signalement envoyé'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Merci pour votre courage. Votre dossier a été enregistré avec succès.',
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Numéro de suivi : #$tracking',
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Conservez-le pour tout suivi ultérieur. Une équipe dédiée vous contactera en toute confidentialité selon vos préférences.',
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: _safeExit,
-            child: const Text('Quitter en sécurité'),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              context.go(RouteConstants.home);
-            },
-            child: const Text('Terminer'),
-          ),
-        ],
-      ),
-    );
+    // Navigate using GoRouter to avoid Navigator inconsistencies
+    context.go('${RouteConstants.reportSuccess}?tracking=$tracking');
+  }
+
+  void _showStepError(String message) {
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  // Business validation rules per step.
+  // All fields are mandatory except: description text/audio, evidence, GPS, and names (victim or denunciator).
+  String? _validateStepData(int step, ReportFormData d) {
+    switch (step) {
+      case 0: // Identification
+        if (d.anonymous == null) return 'Veuillez choisir Anonyme ou Nominal.';
+        if (d.reporterRole == null) return 'Veuillez indiquer votre rôle.';
+        if (d.urgency == null) return 'Veuillez sélectionner un niveau d’urgence.';
+        if (d.violenceTypes.isEmpty) return 'Veuillez sélectionner au moins un type de violence.';
+        return null;
+      case 1: // Persons & incident
+        if (d.victimAgeGroup == null) return 'Veuillez indiquer l’âge de la victime.';
+        if (d.victimSex == null) return 'Veuillez indiquer le sexe de la victime.';
+        // Adresse requise (GPS reste optionnel)
+        if (d.addressLine == null || d.addressLine!.trim().isEmpty) {
+          return 'Veuillez saisir l’adresse de l’incident.';
+        }
+        return null;
+      case 2: // Needs
+        if (d.needs.isEmpty) return 'Veuillez sélectionner au moins un besoin.';
+        return null;
+      case 3: // Contact
+        if (d.contactNumber == null || d.contactNumber!.trim().isEmpty) {
+          return 'Veuillez fournir un numéro de contact.';
+        }
+        if (d.contactPrefs.isEmpty) {
+          return 'Veuillez choisir au moins une préférence de contact.';
+        }
+        if (d.timePref == null) return 'Veuillez choisir un horaire préféré.';
+        return null;
+      default:
+        return null;
+    }
   }
 
   @override
@@ -200,14 +221,14 @@ class _StepperBar extends StatelessWidget {
             return Expanded(
               child: Container(
                 height: 4,
-                color: active ? green.withOpacity(0.7) : Colors.grey.shade300,
+                color: active ? green.withValues(alpha: 0.7) : Colors.grey.shade300,
               ),
             );
           } else {
             final stepIndex = i ~/ 2; // 0..total-1
             final isActive = stepIndex == current;
             final isDone = stepIndex < current;
-            final bg = isActive ? green : (isDone ? green.withOpacity(0.5) : Colors.white);
+            final bg = isActive ? green : (isDone ? green.withValues(alpha: 0.5) : Colors.white);
             final fg = isActive ? Colors.white : (isDone ? Colors.white : Colors.grey.shade600);
             return Container(
               width: 28,
@@ -452,11 +473,14 @@ class _Step2PersonsAndIncidentState extends State<_Step2PersonsAndIncident> {
   bool _recorderReady = false;
   bool _isRecording = false;
   bool _gpsSuccess = false;
+  String? _gpsErrorMessage;
   int _secondsLeft = 0; // countdown while recording
   Timer? _timer;
   final FlutterSoundPlayer _player = FlutterSoundPlayer();
   bool _playerReady = false;
   bool _isPlaying = false;
+  // UI toggle: for anonymous witness/concerned – do you know the victim's name?
+  bool _knowsVictimName = false;
 
   @override
   void initState() {
@@ -468,6 +492,8 @@ class _Step2PersonsAndIncidentState extends State<_Step2PersonsAndIncident> {
 
   _initRecorder();
   _initPlayer();
+  // Initialize victim-name knowledge toggle from existing data
+  _knowsVictimName = (widget.data.victimName != null && widget.data.victimName!.trim().isNotEmpty);
   }
 
   @override
@@ -498,33 +524,80 @@ class _Step2PersonsAndIncidentState extends State<_Step2PersonsAndIncident> {
           const Text('Étape 2 : Informations sur les personnes et l’incident',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
           const SizedBox(height: 12),
+          // Names according to rules
+          // 1) Nominal reporting
           if (d.anonymous == false) ...[
-            const Text('Votre nom complet'),
-            TextFormField(
-              controller: _reporterCtrl,
-              decoration: const InputDecoration(hintText: 'Nom et prénom'),
-              onChanged: (v) => widget.onChanged(d.copyWith(reporterName: v)),
-              validator: (v) => (v == null || v.trim().isEmpty) ? 'Requis' : null,
-            ),
-            const SizedBox(height: 12),
-          ],
-          if (d.reporterRole != ReporterRole.victim) ...[
-            const Text('Nom de la victime (si connu)'),
-            TextFormField(
-              controller: _victimCtrl,
-              decoration: const InputDecoration(hintText: 'Nom de la victime (facultatif)'),
-              onChanged: (v) => widget.onChanged(d.copyWith(victimName: v.isEmpty ? null : v)),
-            ),
-            const SizedBox(height: 12),
-          ] else if (d.anonymous == false) ...[
-            const Text('Votre nom (victime)'),
-            TextFormField(
-              controller: _victimCtrl,
-              decoration: const InputDecoration(hintText: 'Nom et prénom'),
-              onChanged: (v) => widget.onChanged(d.copyWith(victimName: v)),
-              validator: (v) => (v == null || v.trim().isEmpty) ? 'Requis' : null,
-            ),
-            const SizedBox(height: 12),
+            if (d.reporterRole == ReporterRole.victim) ...[
+              const Text('Votre nom complet'),
+              TextFormField(
+                controller: _reporterCtrl,
+                decoration: const InputDecoration(hintText: 'Nom et prénom'),
+                onChanged: (v) {
+                  final value = v.isEmpty ? null : v;
+                  // Store as both reporter and victim
+                  widget.onChanged(d.copyWith(reporterName: value, victimName: value));
+                  // Keep victim text field in sync silently
+                  if (_victimCtrl.text != v) {
+                    _victimCtrl.text = v;
+                  }
+                },
+              ),
+              const SizedBox(height: 12),
+            ] else ...[
+              const Text('Votre nom complet (dénonciateur)'),
+              TextFormField(
+                controller: _reporterCtrl,
+                decoration: const InputDecoration(hintText: 'Nom et prénom'),
+                onChanged: (v) => widget.onChanged(d.copyWith(reporterName: v.isEmpty ? null : v)),
+              ),
+              const SizedBox(height: 12),
+              const Text('Nom complet de la victime'),
+              TextFormField(
+                controller: _victimCtrl,
+                decoration: const InputDecoration(hintText: 'Nom de la victime'),
+                onChanged: (v) => widget.onChanged(d.copyWith(victimName: v.isEmpty ? null : v)),
+              ),
+              const SizedBox(height: 12),
+            ],
+          ] else ...[
+            // 2) Anonymous reporting
+            if (d.reporterRole == ReporterRole.victim) ...[
+              // No name requested
+              const SizedBox.shrink(),
+            ] else ...[
+              const Text('Connaissez‑vous le nom de la victime ?'),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  ChoiceChip(
+                    label: const Text('Oui'),
+                    selected: _knowsVictimName,
+                    onSelected: (_) => setState(() => _knowsVictimName = true),
+                  ),
+                  const SizedBox(width: 8),
+                  ChoiceChip(
+                    label: const Text('Non'),
+                    selected: !_knowsVictimName,
+                    onSelected: (_) {
+                      setState(() => _knowsVictimName = false);
+                      // Clear any previously entered victim name
+                      widget.onChanged(d.copyWith(victimName: null));
+                      if (_victimCtrl.text.isNotEmpty) _victimCtrl.clear();
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              if (_knowsVictimName) ...[
+                const Text('Nom complet de la victime'),
+                TextFormField(
+                  controller: _victimCtrl,
+                  decoration: const InputDecoration(hintText: 'Nom de la victime'),
+                  onChanged: (v) => widget.onChanged(d.copyWith(victimName: v.isEmpty ? null : v)),
+                ),
+                const SizedBox(height: 12),
+              ],
+            ],
           ],
           const Text('Âge de la victime'),
           const SizedBox(height: 6),
@@ -567,19 +640,47 @@ class _Step2PersonsAndIncidentState extends State<_Step2PersonsAndIncident> {
               hintText: 'Saisissez l’adresse (ex: Avenue X, Commune Y)',
             ),
             onChanged: (v) => widget.onChanged(d.copyWith(addressLine: v.isEmpty ? null : v)),
+            validator: (v) => (v == null || v.trim().isEmpty) ? 'Requis' : null,
           ),
           const SizedBox(height: 8),
+          const Text(
+            'Localisation GPS (si vous êtes sur le lieu ou près de l’incident)',
+            style: TextStyle(fontWeight: FontWeight.w500),
+          ),
+          const SizedBox(height: 6),
           OutlinedButton.icon(
             onPressed: _onSendMyLocation,
             icon: const Icon(Icons.my_location_outlined),
-            label: const Text('Envoyer ma position'),
+            label: const Text('Récupérer ma position'),
           ),
-          if (_gpsSuccess)
-            const Padding(
-              padding: EdgeInsets.only(top: 6),
-              child: Text(
-                'Position recuperée avec succès',
-                style: TextStyle(color: Color(0xFF2E7D32), fontWeight: FontWeight.w600),
+          if (_gpsErrorMessage != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Row(
+                children: [
+                  const Icon(Icons.error_outline, color: Colors.red, size: 18),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      _gpsErrorMessage!,
+                      style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          if (_gpsSuccess && widget.data.latitude != null && widget.data.longitude != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Row(
+                children: [
+                  const Icon(Icons.check_circle, color: Color(0xFF2E7D32), size: 18),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Coordonnées récupérées: Lat ${widget.data.latitude!.toStringAsFixed(5)}, Lng ${widget.data.longitude!.toStringAsFixed(5)}',
+                    style: const TextStyle(color: Color(0xFF2E7D32), fontWeight: FontWeight.w600),
+                  ),
+                ],
               ),
             ),
           const SizedBox(height: 12),
@@ -716,15 +817,17 @@ class _Step2PersonsAndIncidentState extends State<_Step2PersonsAndIncident> {
     return Row(
       children: [
         // Round red record/pause button
-        InkWell(
-          onTap: () async {
-            if (_isRecording) {
-              await _stopRecording(save: true);
-            } else {
+        GestureDetector(
+          onLongPressStart: (_) async {
+            if (!_isRecording) {
               await _startRecording();
             }
           },
-          borderRadius: BorderRadius.circular(28),
+          onLongPressEnd: (_) async {
+            if (_isRecording) {
+              await _stopRecording(save: true);
+            }
+          },
           child: Container(
             width: 56,
             height: 56,
@@ -733,7 +836,7 @@ class _Step2PersonsAndIncidentState extends State<_Step2PersonsAndIncident> {
               shape: BoxShape.circle,
             ),
             alignment: Alignment.center,
-            child: Icon(_isRecording ? Icons.pause : Icons.mic, color: Colors.white),
+            child: const Icon(Icons.mic, color: Colors.white),
           ),
         ),
         const SizedBox(width: 12),
@@ -741,7 +844,9 @@ class _Step2PersonsAndIncidentState extends State<_Step2PersonsAndIncident> {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(_isRecording ? 'Enregistrement en cours' : (hasAudio ? 'Reprendre' : 'Enregistrer un audio')),
+            Text(_isRecording
+                ? 'Enregistrement en cours…'
+                : (hasAudio ? 'Reprendre' : 'Envoyer un message audio')),
             if (_isRecording)
               Text(_fmt(_secondsLeft), style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.red)),
           ],
@@ -767,7 +872,10 @@ class _Step2PersonsAndIncidentState extends State<_Step2PersonsAndIncident> {
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        setState(() => _gpsSuccess = false);
+        setState(() {
+          _gpsSuccess = false;
+          _gpsErrorMessage = 'Service de localisation désactivé. Veuillez l’activer dans les réglages.';
+        });
         return;
       }
 
@@ -775,22 +883,50 @@ class _Step2PersonsAndIncidentState extends State<_Step2PersonsAndIncident> {
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
-          setState(() => _gpsSuccess = false);
+          setState(() {
+            _gpsSuccess = false;
+            _gpsErrorMessage = 'Permission de localisation refusée.';
+          });
           return; // user denied
         }
       }
       if (permission == LocationPermission.deniedForever) {
-        setState(() => _gpsSuccess = false);
+        setState(() {
+          _gpsSuccess = false;
+          _gpsErrorMessage = 'Permission refusée définitivement. Autorisez la localisation dans les réglages du système.';
+        });
         return; // cannot request
       }
 
-      final pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.best);
+      Position? pos;
+      try {
+        pos = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.best,
+          timeLimit: const Duration(seconds: 10),
+        );
+      } catch (_) {
+        // Fallback to last known position
+        pos = await Geolocator.getLastKnownPosition();
+      }
+      if (pos == null) {
+        setState(() {
+          _gpsSuccess = false;
+          _gpsErrorMessage = 'Impossible d’obtenir la position (délai dépassé ou aucune position connue).';
+        });
+        return;
+      }
       if (!mounted) return;
       final d = widget.data.copyWith(latitude: pos.latitude, longitude: pos.longitude);
       widget.onChanged(d);
-      setState(() => _gpsSuccess = true);
+      setState(() {
+        _gpsSuccess = true;
+        _gpsErrorMessage = null;
+      });
     } catch (_) {
-      setState(() => _gpsSuccess = false);
+      setState(() {
+        _gpsSuccess = false;
+        _gpsErrorMessage = 'Une erreur est survenue lors de la récupération de la position.';
+      });
     }
   }
 }
@@ -861,6 +997,7 @@ class _Step4EvidenceAndContact extends StatefulWidget {
 class _Step4EvidenceAndContactState extends State<_Step4EvidenceAndContact> {
   final _phoneCtrl = TextEditingController();
   final _codeCtrl = TextEditingController();
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
@@ -891,27 +1028,53 @@ class _Step4EvidenceAndContactState extends State<_Step4EvidenceAndContact> {
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
+            runSpacing: 8,
             children: [
               OutlinedButton.icon(
                 onPressed: () async {
-                  // TODO: Integrate FilePicker for photos (max 5)
-                  final list = [...d.photoPaths];
-                  if (list.length < 5) list.add('photo_${list.length + 1}.jpg');
-                  widget.onChanged(d.copyWith(photoPaths: list));
+                  await _showPhotoSourcePicker(context, d);
                 },
                 icon: const Icon(Icons.image_outlined),
                 label: Text('Photos (${d.photoPaths.length}/5)'),
               ),
-              // Only keep Photos and Audio per request
               OutlinedButton.icon(
                 onPressed: () async {
-                  widget.onChanged(d.copyWith(audioPath: d.audioPath ?? 'audio_note.m4a'));
+                  if (d.audioPath != null) return; // single audio max
+                  final res = await FilePicker.platform.pickFiles(type: FileType.audio, allowMultiple: false);
+                  if (res == null || res.files.isEmpty) return;
+                  final path = res.files.single.path ?? res.files.single.name;
+                  widget.onChanged(d.copyWith(audioPath: path));
                 },
                 icon: const Icon(Icons.mic_none),
-                label: Text(d.audioPath == null ? 'Audio (optionnel)' : 'Audio ajouté'),
+                label: Text(d.audioPath == null ? 'Importer un audio' : 'Audio attaché'),
               ),
             ],
           ),
+          if (d.photoPaths.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            const Text('Photos sélectionnées'),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: d.photoPaths.asMap().entries.map((e) {
+                return _PhotoThumb(
+                  path: e.value,
+                  onRemove: () {
+                    final list = [...d.photoPaths];
+                    list.removeAt(e.key);
+                    widget.onChanged(d.copyWith(photoPaths: list));
+                  },
+                );
+              }).toList(),
+            ),
+          ],
+          if (d.audioPath != null) ...[
+            const SizedBox(height: 8),
+            const Text('Audio attaché'),
+            const SizedBox(height: 4),
+            _fileRow(_pathBaseName(d.audioPath!), onRemove: () => widget.onChanged(d.copyWith(audioPath: null))),
+          ],
           const SizedBox(height: 16),
           const Text('Modalités de contact'),
           const SizedBox(height: 8),
@@ -923,6 +1086,7 @@ class _Step4EvidenceAndContactState extends State<_Step4EvidenceAndContact> {
               hintText: 'Ex: +243 99 123 45 67',
             ),
             onChanged: (v) => widget.onChanged(d.copyWith(contactNumber: v)),
+            validator: (v) => (v == null || v.trim().isEmpty) ? 'Requis' : null,
           ),
           const SizedBox(height: 12),
           const Text('Préférences de contact (multi-sélection)'),
@@ -973,6 +1137,46 @@ class _Step4EvidenceAndContactState extends State<_Step4EvidenceAndContact> {
     );
   }
 
+  Future<void> _showPhotoSourcePicker(BuildContext context, ReportFormData d) async {
+    final remaining = 5 - d.photoPaths.length;
+    if (remaining <= 0) return;
+    await showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_camera_outlined),
+                title: const Text('Appareil photo'),
+                onTap: () async {
+                  Navigator.of(ctx).pop();
+                  final XFile? shot = await _picker.pickImage(source: ImageSource.camera, imageQuality: 85);
+                  if (shot != null) {
+                    final list = [...d.photoPaths, shot.path];
+                    widget.onChanged(d.copyWith(photoPaths: list.take(5).toList()));
+                  }
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library_outlined),
+                title: const Text('Galerie'),
+                onTap: () async {
+                  Navigator.of(ctx).pop();
+                  final List<XFile> picked = await _picker.pickMultiImage(imageQuality: 85);
+                  if (picked.isEmpty) return;
+                  final add = picked.take(remaining).map((x) => x.path).toList();
+                  widget.onChanged(d.copyWith(photoPaths: [...d.photoPaths, ...add]));
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   static String _cLabel(ContactPref c) => switch (c) {
         ContactPref.sms => 'SMS',
         ContactPref.call => 'Appel',
@@ -1001,36 +1205,81 @@ class _Step5Review extends StatelessWidget {
         const SizedBox(height: 8),
         const Text('Vérifiez les informations (vous pouvez revenir aux étapes précédentes).'),
         const SizedBox(height: 16),
-        _reviewTile('Signalement', data.anonymous == true ? 'Anonyme' : 'Nominal'),
-        _reviewTile('Rôle', _roleToText(data.reporterRole)),
-        _reviewTile('Urgence', _urgToText(data.urgency)),
-        _reviewTile('Violences', data.violenceTypes.map(_violToText).join(', ')),
+        _reviewTile('Signalement', _vOrNone(data.anonymous == true ? 'Anonyme' : 'Nominal')),
+        _reviewTile('Rôle', _vOrNone(_roleToText(data.reporterRole))),
+        _reviewTile('Urgence', _vOrNone(_urgToText(data.urgency))),
+        _reviewTile('Violences', data.violenceTypes.isEmpty ? _none() : data.violenceTypes.map(_violToText).join(', ')),
         const Divider(),
-        _reviewTile('Victime', data.victimName ?? '—'),
-        _reviewTile('Âge', _ageToText(data.victimAgeGroup)),
-        _reviewTile('Sexe', _sexToText(data.victimSex)),
-        _reviewTile('Adresse', data.addressLine ?? '—'),
-        if (data.latitude != null && data.longitude != null)
-          _reviewTile('Position GPS',
-              'Lat ${data.latitude!.toStringAsFixed(5)}, Lng ${data.longitude!.toStringAsFixed(5)}'),
+        _reviewTile('Nom du déclarant', _vOrNone(data.reporterName)),
+        _reviewTile('Nom de la victime', _vOrNone(data.victimName)),
+        _reviewTile('Âge', _vOrNone(_ageToText(data.victimAgeGroup))),
+        _reviewTile('Sexe', _vOrNone(_sexToText(data.victimSex))),
+        _reviewTile('Date de l’incident', _vOrNone(_fmtDate(data.incidentDate))),
+        _reviewTile('Adresse', _vOrNone(data.addressLine)),
+        _reviewTile(
+          'Position GPS',
+          (data.latitude != null && data.longitude != null)
+              ? 'Lat ${data.latitude!.toStringAsFixed(5)}, Lng ${data.longitude!.toStringAsFixed(5)}'
+              : _none(),
+        ),
+        _reviewTile('Fréquence', _vOrNone(_freqToText(data.frequency))),
+        _reviewTile('Relation', _vOrNone(_relToText(data.relation))),
+        _reviewTile('Description (texte)', _vOrNone(data.descriptionText)),
+        _reviewTile('Message audio (description)', data.descriptionAudioPath != null ? 'Ajouté' : _none()),
         const Divider(),
-        _reviewTile('Besoins', data.needs.isEmpty ? '—' : data.needs.map(_needToText).join(', ')),
+        _reviewTile('Besoins', data.needs.isEmpty ? _none() : data.needs.map(_needToText).join(', ')),
         const Divider(),
-        _reviewTile('Contact', data.contactNumber ?? '—'),
+        _reviewTile('Contact', _vOrNone(data.contactNumber)),
         _reviewTile(
           'Préférences',
-          data.contactPrefs.isEmpty
-              ? '—'
-              : data.contactPrefs.map(_contactToText).join(', '),
+          data.contactPrefs.isEmpty ? _none() : data.contactPrefs.map(_contactToText).join(', '),
         ),
-        _reviewTile('Horaire', _timeToText(data.timePref)),
+        _reviewTile('Horaire', _vOrNone(_timeToText(data.timePref))),
+        _reviewTile('Mot de code', _vOrNone(data.securityCode)),
+        const Divider(),
+        _reviewTile('Photos', data.photoPaths.isEmpty ? _none() : '${data.photoPaths.length} sélectionnée(s)\n${data.photoPaths.map(_basename).join('\n')}'),
+        if (data.photoPaths.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: data.photoPaths
+                .map((p) => _PhotoThumb(path: p))
+                .toList(),
+          ),
+        ],
+        _reviewTile('Audio attaché (preuve)', data.audioPath != null ? _basename(data.audioPath!) : _none()),
+        if (data.documentPaths.isNotEmpty)
+          _reviewTile('Documents', data.documentPaths.map(_basename).join('\n')),
+        if (data.screenshotPaths.isNotEmpty)
+          _reviewTile('Captures', data.screenshotPaths.map(_basename).join('\n')),
+        const SizedBox(height: 16),
+        // Annotation requise
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFF8E1),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0xFFFFE082)),
+          ),
+          child: const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Important', style: TextStyle(fontWeight: FontWeight.w700)),
+              SizedBox(height: 6),
+              Text(
+                'Je confirme que les informations fournies sont exactes et je suis prêt(e) à envoyer ce signalement.',
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
 
   Widget _reviewTile(String title, String value) => ListTile(
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text(value.isEmpty ? '—' : value),
+    subtitle: Text(value.isEmpty ? _none() : value),
       );
 
   String _roleToText(ReporterRole? r) => switch (r) {
@@ -1052,6 +1301,113 @@ class _Step5Review extends StatelessWidget {
   String _needToText(NeedType n) => _Step3Needs._nLabel(n);
   String _contactToText(ContactPref c) => _Step4EvidenceAndContactState._cLabel(c);
   String _timeToText(TimePref? t) => t == null ? '—' : _Step4EvidenceAndContactState._tLabel(t);
+  String _freqToText(Frequency? f) => switch (f) {
+        Frequency.first => 'Première fois',
+        Frequency.repeated => 'Répétée',
+        Frequency.chronic => 'Chronique',
+        null => '—',
+      };
+  String _relToText(Relation? r) => switch (r) {
+        Relation.partner => 'Partenaire',
+        Relation.parent => 'Parent',
+        Relation.neighbor => 'Voisin',
+        Relation.colleague => 'Collègue',
+        Relation.unknown => 'Inconnu',
+        Relation.other => 'Autre',
+        null => '—',
+      };
+  String _fmtDate(DateTime? d) => d == null
+      ? '—'
+      : '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+  String _basename(String p) {
+    final parts = p.split(RegExp(r'[\\/]'));
+    return parts.isNotEmpty ? parts.last : p;
+  }
+  String _none() => 'Aucun élément saisi';
+  String _vOrNone(String? v) => (v == null || v.trim().isEmpty || v == '—') ? _none() : v;
+}
+
+// Small helper row to display selected files with a remove button
+Widget _fileRow(String name, {VoidCallback? onRemove}) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 2),
+    child: Row(
+      children: [
+        const Icon(Icons.insert_drive_file_outlined, size: 18, color: Colors.grey),
+        const SizedBox(width: 8),
+        Expanded(child: Text(name, overflow: TextOverflow.ellipsis)),
+        if (onRemove != null)
+          IconButton(
+            icon: const Icon(Icons.close, size: 18),
+            tooltip: 'Retirer',
+            onPressed: onRemove,
+          ),
+      ],
+    ),
+  );
+}
+
+// Path helper shared outside Step 5
+String _pathBaseName(String p) {
+  final parts = p.split(RegExp(r'[\\/]'));
+  return parts.isNotEmpty ? parts.last : p;
+}
+
+// Small square photo thumbnail using XFile bytes (works on mobile and web)
+class _PhotoThumb extends StatelessWidget {
+  final String path;
+  final VoidCallback? onRemove;
+  const _PhotoThumb({required this.path, this.onRemove});
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          width: 76,
+          height: 76,
+          decoration: BoxDecoration(
+            color: Colors.grey.shade200,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: FutureBuilder<Uint8List>(
+              future: XFile(path).readAsBytes(),
+              builder: (context, snap) {
+                if (snap.connectionState == ConnectionState.waiting) {
+                  return const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)));
+                }
+                if (!snap.hasData || snap.hasError) {
+                  return const Center(child: Icon(Icons.broken_image_outlined, color: Colors.grey));
+                }
+                return Image.memory(snap.data!, fit: BoxFit.cover);
+              },
+            ),
+          ),
+        ),
+        if (onRemove != null)
+          Positioned(
+            top: -6,
+            right: -6,
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: onRemove,
+                customBorder: const CircleBorder(),
+                child: Container(
+                  decoration: const BoxDecoration(color: Colors.black87, shape: BoxShape.circle),
+                  padding: const EdgeInsets.all(2),
+                  child: const Icon(Icons.close, size: 16, color: Colors.white),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
 }
 
 // ------------------- Reusable styled widgets -------------------
@@ -1099,6 +1455,119 @@ class _SelectTile extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ------------------- Success screen -------------------
+class SubmissionSuccessScreen extends StatelessWidget {
+  final String trackingNumber;
+  final VoidCallback onExit;
+  const SubmissionSuccessScreen({super.key, required this.trackingNumber, required this.onExit});
+
+  @override
+  Widget build(BuildContext context) {
+    const green = Color(0xFF4CAF50);
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: green,
+        foregroundColor: Colors.white,
+        title: const Text('Confirmation'),
+      ),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            const SizedBox(height: 8),
+            // Big check in green circle
+            Center(
+              child: Container(
+                width: 88,
+                height: 88,
+                decoration: const BoxDecoration(color: Color(0xFFE8F5E8), shape: BoxShape.circle),
+                child: const Icon(Icons.check, size: 54, color: green),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Center(
+              child: Text(
+                'Merci pour votre courage',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: green),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE8F5E8),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFB9E4BA)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const Text('Numéro de suivi'),
+                  const SizedBox(height: 6),
+                  Text(
+                    trackingNumber,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      color: green,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text('Conservez-le pour tout suivi ultérieur'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            _successRow(Icons.shield_outlined, 'Votre dossier a été enregistré avec succès',
+                'Toutes vos informations sont sécurisées et confidentielles'),
+            _successRow(Icons.groups_2_outlined, 'Une équipe dédiée vous contactera',
+                'Selon vos préférences, en toute confidentialité'),
+            _successRow(Icons.favorite_border, "Vous n'êtes pas seul(e)",
+                'Nous sommes là pour vous accompagner dans cette épreuve'),
+            const Divider(height: 32),
+            const Text(
+              "Si vous êtes en danger immédiat, contactez les services d'urgence",
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.black54),
+            ),
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: onExit,
+              style: FilledButton.styleFrom(backgroundColor: green, foregroundColor: Colors.white),
+              child: const Text('Quitter en sécurité'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _successRow(IconData icon, String title, String subtitle) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: const Color(0xFF4CAF50)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 2),
+                Text(subtitle, style: const TextStyle(color: Colors.black54)),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
