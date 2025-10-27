@@ -5,6 +5,7 @@ class EduCategory {
   final String title;
   final String subtitle;
   final IconData icon;
+  final String imageUrl;
   final int articles;
   final int videos;
   final int infographics;
@@ -16,6 +17,7 @@ class EduCategory {
     required this.title,
     required this.subtitle,
     required this.icon,
+    required this.imageUrl,
     this.articles = 0,
     this.videos = 0,
     this.infographics = 0,
@@ -30,6 +32,7 @@ const List<EduCategory> kEduCategories = [
     title: "Qu'est-ce que les VBG ?",
     subtitle: 'Définitions, mythes et signes',
     icon: Icons.info_outline,
+    imageUrl: 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?q=80&w=1200&auto=format&fit=crop',
     articles: 6,
     videos: 3,
     infographics: 4,
@@ -41,6 +44,7 @@ const List<EduCategory> kEduCategories = [
     title: 'Mes droits',
     subtitle: 'Cadre légal et protection',
     icon: Icons.gavel_outlined,
+    imageUrl: 'https://images.unsplash.com/photo-1555375771-14b2a63968ee?q=80&w=1200&auto=format&fit=crop',
     articles: 5,
     videos: 2,
     infographics: 2,
@@ -52,6 +56,7 @@ const List<EduCategory> kEduCategories = [
     title: 'Comment me protéger ?',
     subtitle: 'Plan de sécurité et urgence',
     icon: Icons.shield_outlined,
+    imageUrl: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?q=80&w=1200&auto=format&fit=crop',
     articles: 7,
     videos: 2,
     infographics: 3,
@@ -63,6 +68,7 @@ const List<EduCategory> kEduCategories = [
     title: 'Soutenir une victime',
     subtitle: 'Écoute, empathie, référer',
     icon: Icons.volunteer_activism_outlined,
+    imageUrl: 'https://images.unsplash.com/photo-1518481612222-68bbe828ecd1?q=80&w=1200&auto=format&fit=crop',
     articles: 4,
     videos: 2,
     infographics: 2,

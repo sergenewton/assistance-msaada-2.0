@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/constants/route_constants.dart';
 import 'resource_mock_data.dart';
 
@@ -14,31 +15,31 @@ class EducationalResourcesScreen extends StatelessWidget {
         foregroundColor: Colors.white,
         title: const Text('Ressources éducatives'),
       ),
-      body: GridView.builder(
+      body: ListView.builder(
         padding: const EdgeInsets.all(16),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: 0.94,
-        ),
         itemCount: kEduCategories.length,
         itemBuilder: (context, i) {
           final c = kEduCategories[i];
-          return _CategoryCard(category: c, onTap: () {
-            final path = RouteConstants.resourcesCategory.replaceFirst(':id', c.id);
-            Navigator.of(context).pushNamed(path);
-          });
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: _FeaturedCategoryCard(
+              category: c,
+              onTap: () {
+                final path = RouteConstants.resourcesCategory.replaceFirst(':id', c.id);
+                context.push(path);
+              },
+            ),
+          );
         },
       ),
     );
   }
 }
 
-class _CategoryCard extends StatelessWidget {
+class _FeaturedCategoryCard extends StatelessWidget {
   final EduCategory category;
   final VoidCallback onTap;
-  const _CategoryCard({required this.category, required this.onTap});
+  const _FeaturedCategoryCard({required this.category, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -47,40 +48,88 @@ class _CategoryCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
           color: Colors.white,
-          boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 2)),
-          ],
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 12, offset: const Offset(0, 4))],
         ),
-        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                color: const Color(0xFFE8F5E8),
-                borderRadius: BorderRadius.circular(12),
+            // Featured image with gradient overlay and title
+            ClipRRect(
+              borderRadius: const BorderRadius.only(topLeft: Radius.circular(16), topRight: Radius.circular(16)),
+              child: SizedBox(
+                height: 140,
+                width: double.infinity,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // image
+                    Image.network(
+                      category.imageUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, _, __) => Container(color: const Color(0xFFE5E7EB)),
+                    ),
+                    // gradient overlay
+                    Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [Color(0x00000000), Color(0x99000000)],
+                        ),
+                      ),
+                    ),
+                    // icon chip + title
+                    Positioned(
+                      left: 12,
+                      right: 12,
+                      bottom: 12,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Container(
+                            decoration: BoxDecoration(color: const Color(0xFF7C3AED), borderRadius: BorderRadius.circular(12)),
+                            padding: const EdgeInsets.all(8),
+                            child: Icon(category.icon, color: Colors.white),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              category.title,
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  ],
+                ),
               ),
-              child: Icon(category.icon, color: const Color(0xFF2E7D32), size: 28),
             ),
-            const SizedBox(height: 10),
-            Text(category.title, style: const TextStyle(fontWeight: FontWeight.w700)),
-            const SizedBox(height: 2),
-            Text(category.subtitle, style: const TextStyle(color: Colors.grey, fontSize: 12)),
-            const Spacer(),
-            Wrap(
-              spacing: 6,
-              runSpacing: -8,
-              children: [
-                _countChip(Icons.article_outlined, category.articles),
-                _countChip(Icons.play_circle_outline, category.videos),
-                _countChip(Icons.image_outlined, category.infographics),
-                _countChip(Icons.quiz_outlined, category.quizzes),
-                _countChip(Icons.help_outline, category.faqs),
-              ],
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    category.subtitle,
+                    style: const TextStyle(color: Colors.black54),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      _countRow(Icons.article_outlined, '${category.articles} articles'),
+                      const SizedBox(width: 16),
+                      _countRow(Icons.play_circle_outline, '${category.videos} vidéos'),
+                      const Spacer(),
+                      const Icon(Icons.arrow_forward, color: Colors.deepPurple),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -88,22 +137,11 @@ class _CategoryCard extends StatelessWidget {
     );
   }
 
-  Widget _countChip(IconData icon, int count) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF3F6F9),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE3E7ED)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+  Widget _countRow(IconData icon, String text) => Row(
         children: [
-          Icon(icon, size: 16, color: const Color(0xFF4B5563)),
-          const SizedBox(width: 4),
-          Text('$count', style: const TextStyle(fontWeight: FontWeight.w600)),
+          Icon(icon, size: 18, color: const Color(0xFF6B7280)),
+          const SizedBox(width: 6),
+          Text(text, style: const TextStyle(color: Color(0xFF6B7280))),
         ],
-      ),
-    );
-  }
+      );
 }
