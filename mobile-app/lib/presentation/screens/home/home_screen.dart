@@ -70,7 +70,7 @@ class HomeScreen extends StatelessWidget {
             IconButton(
               icon: const Icon(Icons.settings_outlined, color: Colors.white, size: 26),
               onPressed: () {
-                // TODO: Navigate to settings page when available
+                context.push(RouteConstants.settings);
               },
               tooltip: 'Paramètres',
             ),
@@ -209,6 +209,7 @@ class HomeScreen extends StatelessWidget {
                 'Protégez-vous et restez en sécurité',
                 Icons.shield_outlined,
                 const Color(0xFF2196F3),
+                onTap: () => context.push(RouteConstants.safetyTips),
               ),
               const SizedBox(height: 12),
               _buildInfoCard(
@@ -217,6 +218,7 @@ class HomeScreen extends StatelessWidget {
                 'Expériences de survie et de guérison',
                 Icons.people_outline,
                 const Color(0xFF9C27B0),
+                onTap: () => context.push(RouteConstants.testimonies),
               ),
 
               const SizedBox(height: 24),

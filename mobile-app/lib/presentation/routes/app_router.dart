@@ -6,6 +6,9 @@ import '../screens/report/report_wizard_screen.dart';
 import '../screens/centers/aid_centers_screen.dart';
 import '../screens/resources/educational_resources_screen.dart';
 import '../screens/resources/resource_category_screen.dart';
+import '../screens/safety/safety_tips_screen.dart';
+import '../screens/testimonies/testimonies_screen.dart';
+import '../screens/settings/settings_screen.dart';
 
 class AppRouter {
   static final GoRouter _router = GoRouter(
@@ -85,6 +88,16 @@ class AppRouter {
         name: 'centers',
         builder: (context, state) => const AidCentersScreen(),
       ),
+      GoRoute(
+        path: RouteConstants.safetyTips,
+        name: 'safety-tips',
+        builder: (context, state) => const SafetyTipsScreen(),
+      ),
+      GoRoute(
+        path: RouteConstants.testimonies,
+        name: 'testimonies',
+        builder: (context, state) => const TestimoniesScreen(),
+      ),
       
       GoRoute(
         path: RouteConstants.articles,
@@ -121,11 +134,7 @@ class AppRouter {
       GoRoute(
         path: RouteConstants.settings,
         name: 'settings',
-        builder: (context, state) => const Scaffold(
-          body: Center(
-            child: Text('Paramètres'),
-          ),
-        ),
+        builder: (context, state) => const SettingsScreen(),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(
