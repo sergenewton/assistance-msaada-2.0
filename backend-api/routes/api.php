@@ -20,8 +20,29 @@ Route::prefix('v1')->group(function () {
         ]);
     });
     
-    // Include auth routes
-    require_once __DIR__ . '/v1/auth.php';
+    // Public, no-auth reporting routes
+    $publicRoutes = __DIR__ . '/api/v1/public.php';
+    if (!file_exists($publicRoutes)) {
+        $publicRoutes = __DIR__ . '/v1/public.php';
+    }
+    if (file_exists($publicRoutes)) {
+        require_once $publicRoutes;
+    }
+
+    // Include (optional) auth routes if present
+    $authRoutes = __DIR__ . '/v1/auth.php';
+    if (file_exists($authRoutes)) {
+        require_once $authRoutes;
+    }
+
+    // Include (optional) protected reports routes if present
+    $reportsRoutes = __DIR__ . '/api/v1/reports.php';
+    if (!file_exists($reportsRoutes)) {
+        $reportsRoutes = __DIR__ . '/v1/reports.php';
+    }
+    if (file_exists($reportsRoutes)) {
+        require_once $reportsRoutes;
+    }
 });
 
 // Global health check (without version)

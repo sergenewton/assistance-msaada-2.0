@@ -1,6 +1,8 @@
 class ApiConstants {
-  // Base URLs
-  static const String baseUrl = 'https://api.assistance-msaada.com';
+  // Base URL: can be overridden at build/run time with --dart-define=API_BASE_URL=... 
+  static const String defaultBaseUrl = 'https://api.assistance-msaada.com';
+  static const String envBaseUrl = String.fromEnvironment('API_BASE_URL');
+  static String get baseUrl => envBaseUrl.isNotEmpty ? envBaseUrl : defaultBaseUrl;
   static const String apiVersion = '/api/v1';
   
   // Auth Endpoints

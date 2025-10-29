@@ -93,8 +93,7 @@ return new class extends Migration
             $table->index(['assigned_aps_id', 'status']);
             $table->index(['violence_type', 'created_at']);
             
-            // Check constraints
-            $table->check('urgency_score >= 0 AND urgency_score <= 100');
+            // Note: Check constraints will be added via raw SQL if needed
         });
     }
 

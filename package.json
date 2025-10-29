@@ -8,7 +8,7 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "./scripts/dev.sh",
+    "dev": "./quick-start-local.sh",
     "build": "./scripts/build.sh",
     "test": "./scripts/test.sh",
     "lint": "./scripts/lint.sh",

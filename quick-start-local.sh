@@ -63,6 +63,8 @@ Usage: $0 [OPTIONS]
 Options:
     --backend-only      Démarrer uniquement l'API Backend (port 8000)
     --frontend-only     Démarrer uniquement le Frontend (port 3000)
+    --db-only           Démarrer uniquement la base MySQL (port 3306)
+    --no-db             Ne pas démarrer MySQL
     --stop              Arrêter tous les services
     --status            Vérifier le statut des services
     -h, --help          Afficher cette aide
@@ -73,6 +75,7 @@ Exemples:
     $0                  # Démarrage complet
     $0 --backend-only   # API seulement
     $0 --frontend-only  # Frontend seulement
+    $0 --db-only        # Base MySQL seulement
     $0 --stop           # Arrêt des services
     $0 --status         # Statut des services
 
@@ -115,6 +118,13 @@ check_prerequisites() {
         fi
     done
 
+    # Docker (pour MySQL)
+    if ! command -v docker &> /dev/null; then
+        warn "Docker non détecté - MySQL ne pourra pas être démarré automatiquement"
+    else
+        log "Docker version: $(docker --version | awk '{print $3}' | tr -d ',')"
+    fi
+
     if [[ ${#missing_tools[@]} -gt 0 ]]; then
         error "Outils manquants: ${missing_tools[*]}"
         error "Veuillez installer ces outils avant de continuer"
@@ -136,6 +146,14 @@ stop_services() {
     pkill -f "npm run dev" 2>/dev/null || true
     pkill -f "vite" 2>/dev/null || true
 
+    # Arrêt MySQL docker (compose)
+    if command -v docker &> /dev/null; then
+        if [[ -f "$SCRIPT_DIR/docker-compose.mysql.yml" ]]; then
+            info "Arrêt de MySQL (Docker Compose)"
+            docker compose -f "$SCRIPT_DIR/docker-compose.mysql.yml" down -v 2>/dev/null || true
+        fi
+    fi
+
     sleep 2
 
     success "Services arrêtés"
@@ -156,9 +174,41 @@ start_backend() {
         return 1
     fi
 
+    # Configurer Laravel et exécuter les migrations + seeders
+    cd "$BACKEND_DIR"
+    if [[ -f "artisan" ]]; then
+        info "Configuration de la base de données Laravel..."
+        
+        # Exécuter les migrations
+        info "Exécution des migrations Laravel..."
+        php artisan migrate --no-interaction --force || {
+            warn "Échec des migrations - le système utilisera le stockage fichier"
+        }
+        
+        # Exécuter le seeder de configuration initiale (rôles + super admin)
+        info "Création du compte Super Admin et rôles de base..."
+        php artisan db:seed --class=InitialSetupSeeder --no-interaction --force || {
+            warn "Échec du seeding - utilisez le seeder manuel si nécessaire"
+        }
+        
+        success "Configuration Laravel terminée"
+    else
+        warn "Artisan non trouvé - saut de la configuration Laravel"
+    fi
+    
+    # Retourner au répertoire public pour démarrer le serveur
+    cd "$BACKEND_DIR/public"
+
     # Démarrer le serveur PHP en arrière-plan
-    info "Démarrage du serveur PHP sur http://localhost:8000"
-    php -S localhost:8000 api-test.php > /tmp/msaada-backend.log 2>&1 &
+    info "Démarrage du serveur PHP sur http://0.0.0.0:8000 (accessible depuis l'émulateur Android via 10.0.2.2)"
+    # Exporter les variables d'environnement DB pour le routeur PHP (si MySQL est utilisé)
+    export DB_HOST="${DB_HOST:-127.0.0.1}"
+    export DB_PORT="${DB_PORT:-3306}"
+    export DB_DATABASE="${DB_DATABASE:-vbg_platform}"
+    export DB_USERNAME="${DB_USERNAME:-vbg}"
+    export DB_PASSWORD="${DB_PASSWORD:-vbgpass}"
+
+    php -S 0.0.0.0:8000 api-test.php > /tmp/msaada-backend.log 2>&1 &
     local backend_pid=$!
 
     # Attendre que le serveur soit prêt
@@ -175,6 +225,41 @@ start_backend() {
 
     error "Échec du démarrage du backend après ${max_wait}s"
     return 1
+}
+
+# Démarrage de la base de données MySQL (Docker)
+start_db() {
+    if ! command -v docker &> /dev/null; then
+        warn "Docker non disponible - saut du démarrage MySQL"
+        return 0
+    fi
+    if [[ ! -f "$SCRIPT_DIR/docker-compose.mysql.yml" ]]; then
+        warn "Fichier docker-compose.mysql.yml introuvable - saut MySQL"
+        return 0
+    fi
+
+    action "Démarrage de MySQL (Docker Compose)"
+    docker compose -f "$SCRIPT_DIR/docker-compose.mysql.yml" up -d --wait || {
+        warn "Impossible de démarrer MySQL automatiquement"
+        return 1
+    }
+
+    # Attente de disponibilité
+    local wait_time=0
+    local max_wait=60
+    while [[ $wait_time -lt $max_wait ]]; do
+        if docker compose -f "$SCRIPT_DIR/docker-compose.mysql.yml" ps --status running | grep -q "msaada-mysql"; then
+            # Vérifier la connectivité TCP locale
+            if nc -z 127.0.0.1 3306 2>/dev/null; then
+                success "MySQL opérationnel sur 127.0.0.1:3306"
+                return 0
+            fi
+        fi
+        sleep 2
+        ((wait_time+=2))
+    done
+    warn "MySQL n'a pas répondu à temps - le backend utilisera le stockage fichier"
+    return 0
 }
 
 # Démarrage du frontend
@@ -225,6 +310,7 @@ check_status() {
 
     local backend_status="❌ Arrêté"
     local frontend_status="❌ Arrêté"
+    local db_status="❌ Arrêté"
 
     # Check backend
     if curl -s --max-time 5 "http://localhost:8000/api/health" >/dev/null 2>&1; then
@@ -236,10 +322,16 @@ check_status() {
         frontend_status="✅ Fonctionnel"
     fi
 
+    # Check DB
+    if nc -z 127.0.0.1 3306 2>/dev/null; then
+        db_status="✅ Fonctionnel"
+    fi
+
     echo ""
     info "📊 Statut des services:"
     echo -e "  🔧 Backend API (port 8000):  $backend_status"
     echo -e "  🎨 Frontend Web (port 3000): $frontend_status"
+    echo -e "  🗄️  Base MySQL (port 3306):  $db_status"
     echo ""
 
     # Test de connexion API
@@ -274,6 +366,9 @@ show_final_info() {
     info "- Application Web: ${CYAN}http://localhost:3000${NC}"
     info "- API Backend: ${CYAN}http://localhost:8000/api${NC}"
     info "- Health Check: ${CYAN}http://localhost:8000/api/health${NC}"
+    if nc -z 127.0.0.1 3306 2>/dev/null; then
+        info "- phpMyAdmin: ${CYAN}http://localhost:8081${NC} (root/password)"
+    fi
     echo ""
     
     info "🔐 Identifiants de test:"
@@ -307,6 +402,8 @@ trap cleanup_on_exit INT TERM
 main() {
     local backend_only=false
     local frontend_only=false
+    local db_only=false
+    local no_db=false
     local stop_services_flag=false
     local status_only=false
 
@@ -327,6 +424,14 @@ main() {
                 ;;
             --status)
                 status_only=true
+                shift
+                ;;
+            --db-only)
+                db_only=true
+                shift
+                ;;
+            --no-db)
+                no_db=true
                 shift
                 ;;
             -h|--help)
@@ -362,6 +467,17 @@ main() {
 
     # Démarrer les services selon les options
     local services_started=0
+
+    # Base de données d'abord (sauf --no-db)
+    if [[ "$no_db" != "true" ]]; then
+        start_db || true
+    fi
+
+    if [[ "$db_only" == "true" ]]; then
+        check_status
+        success "MySQL seul démarré."
+        exit 0
+    fi
 
     if [[ "$frontend_only" != "true" ]]; then
         if start_backend; then

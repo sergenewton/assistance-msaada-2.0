@@ -1,7 +1,8 @@
 <?php
 
 header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: http://localhost:3000');
+// Allow all origins in local mock to enable Flutter web and other dev clients
+header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
 header('Access-Control-Allow-Credentials: true');
@@ -14,6 +15,123 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $method = $_SERVER['REQUEST_METHOD'];
+
+// Simple file-backed store for reports to simulate a database
+$STORE_FILE = sys_get_temp_dir() . '/msaada_reports.json';
+if (!file_exists($STORE_FILE)) {
+    file_put_contents($STORE_FILE, json_encode([]));
+}
+
+// Optional: MySQL-backed persistence using PDO when available
+function db_env(string $key, ?string $default = null): ?string {
+    $val = getenv($key);
+    return ($val === false || $val === '') ? $default : $val;
+}
+
+function db_pdo(): ?PDO {
+    static $pdo = null; // re-use connection
+    if ($pdo !== null) {
+        return $pdo;
+    }
+    $host = db_env('DB_HOST', '127.0.0.1');
+    $port = (int) db_env('DB_PORT', '3306');
+    $db   = db_env('DB_DATABASE', 'vbg_platform');
+    $user = db_env('DB_USERNAME', 'vbg');
+    $pass = db_env('DB_PASSWORD', 'vbgpass');
+    $charset = 'utf8mb4';
+    $dsn = "mysql:host={$host};port={$port};dbname={$db};charset={$charset}";
+    try {
+        $pdo = new PDO($dsn, $user, $pass, [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        ]);
+        return $pdo;
+    } catch (Throwable $e) {
+        // Silently ignore DB errors for mock server; file-backed store remains the source of truth in dev
+        return null;
+    }
+}
+
+function db_has_reports_table(PDO $pdo): bool {
+    try {
+        $stmt = $pdo->query("SHOW TABLES LIKE 'reports'");
+        return (bool) $stmt->fetchColumn();
+    } catch (Throwable $e) {
+        return false;
+    }
+}
+
+function db_store_report(array $record): void {
+    $pdo = db_pdo();
+    if (!$pdo) return;
+    if (!db_has_reports_table($pdo)) return; // don't auto-create; respect Laravel migrations
+    try {
+        // Insert minimal subset matching Laravel schema (UUID id must be provided)
+        $id = bin2hex(random_bytes(16));
+        $now = date('Y-m-d H:i:s');
+        $payload = $record['payload'];
+        $violence = $payload['violence_type'] ?? null;
+        if (is_array($violence)) { $violence = $violence[0] ?? 'other'; }
+        $urgency = $payload['urgency_level'] ?? null;
+        $loc = $payload['incident_location'] ?? null;
+        $address = is_array($loc) ? ($loc['address_line'] ?? null) : (is_string($loc) ? $loc : null);
+        $lat = is_array($loc) ? ($loc['latitude'] ?? null) : null;
+        $lng = is_array($loc) ? ($loc['longitude'] ?? null) : null;
+        $stmt = $pdo->prepare('INSERT INTO reports (id, report_number, is_anonymous, violence_type, urgency_level, incident_location, address_line, latitude, longitude, payload, created_at, updated_at) VALUES (:id, :rn, :anon, :vt, :ul, :iloc, :addr, :lat, :lng, CAST(:payload AS JSON), :created_at, :updated_at)');
+        $stmt->execute([
+            ':id' => $id,
+            ':rn' => $record['report_number'],
+            ':anon' => (int) ($payload['is_anonymous'] ?? 0),
+            ':vt' => $violence,
+            ':ul' => $urgency,
+            ':iloc' => $address,
+            ':addr' => $address,
+            ':lat' => $lat,
+            ':lng' => $lng,
+            ':payload' => json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            ':created_at' => $now,
+            ':updated_at' => $now,
+        ]);
+    } catch (Throwable $e) {
+        // ignore in mock
+    }
+}
+
+function db_find_report_by_tracking(string $tracking): ?array {
+    $pdo = db_pdo();
+    if (!$pdo) return null;
+    try {
+    if (!db_has_reports_table($pdo)) return null;
+        $stmt = $pdo->prepare('SELECT report_number, payload, created_at FROM reports WHERE report_number = :rn LIMIT 1');
+        $stmt->execute([':rn' => $tracking]);
+        $row = $stmt->fetch();
+        if (!$row) return null;
+        return [
+            'report_number' => $row['report_number'],
+            'payload' => json_decode($row['payload'], true),
+            'created_at' => date('c', strtotime($row['created_at'])),
+            'source' => 'mysql'
+        ];
+    } catch (Throwable $e) {
+        return null;
+    }
+}
+
+function store_report(array $record, string $file): void {
+    $all = json_decode(file_get_contents($file), true) ?: [];
+    $all[] = $record;
+    file_put_contents($file, json_encode($all));
+}
+
+function find_report_by_tracking(string $tracking, string $file): ?array {
+    $all = json_decode(file_get_contents($file), true) ?: [];
+    foreach ($all as $r) {
+        if (($r['report_number'] ?? null) === $tracking) {
+            return $r;
+        }
+    }
+    return null;
+}
 
 // Simulation de base de données
 // Données des 6 profils utilisateurs
@@ -73,6 +191,81 @@ $users = [
     ]
 ];
 
+// Fonction pour charger les utilisateurs depuis MySQL avec fallback sur les utilisateurs statiques
+function load_users_from_db(): array {
+    global $users; // utilisateurs statiques par défaut
+    
+    $pdo = db_pdo();
+    if (!$pdo) {
+        return $users; // fallback sur les utilisateurs statiques si pas de DB
+    }
+    
+    try {
+        $sql = "
+            SELECT 
+                u.id,
+                u.password,
+                u.is_active,
+                u.created_at,
+                u.two_factor_enabled,
+                r.name as role,
+                r.display_name as role_display_name
+            FROM users u 
+            JOIN roles r ON u.role_id = r.id 
+            WHERE u.is_active = 1 AND u.deleted_at IS NULL
+        ";
+        
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute();
+        $db_users = $stmt->fetchAll();
+        
+        $formatted_users = [];
+        foreach ($db_users as $user) {
+            // Déchiffrer l'email et le téléphone (si chiffrés)
+            $email = '';
+            $phone = '';
+            
+            // Essayer de récupérer l'email et téléphone chiffrés
+            $user_details_sql = "SELECT email, phone FROM users WHERE id = ?";
+            $details_stmt = $pdo->prepare($user_details_sql);
+            $details_stmt->execute([$user['id']]);
+            $details = $details_stmt->fetch();
+            
+            if ($details) {
+                // Les données sont chiffrées avec Laravel, mais nous sommes dans un contexte PHP simple
+                // Pour l'instant, utilisons des valeurs connues pour le super admin
+                if ($user['role'] === 'admin') {
+                    $email = 'admin@msaada.cd';
+                    $phone = '+243000000000';
+                } else {
+                    // Pour les autres utilisateurs, utiliser une valeur par défaut
+                    $email = 'user@example.com';
+                    $phone = '+243000000000';
+                }
+            }
+            
+            $formatted_users[] = [
+                'id' => $user['id'],
+                'email' => $email,
+                'phone' => $phone,
+                'password' => $user['password'],
+                'role' => $user['role'],
+                'role_display_name' => $user['role_display_name'],
+                'permissions' => [], // À implémenter selon le rôle
+                'two_factor_enabled' => (bool) $user['two_factor_enabled'],
+                'created_at' => $user['created_at']
+            ];
+        }
+        
+        // Combiner avec les utilisateurs statiques (pour compatibilité)
+        return array_merge($users, $formatted_users);
+        
+    } catch (Exception $e) {
+        // En cas d'erreur, retourner les utilisateurs statiques
+        return $users;
+    }
+}
+
 // Route: Health Check
 if ($uri === '/api/health' && $method === 'GET') {
     echo json_encode([
@@ -101,9 +294,12 @@ if ($uri === '/api/v1/auth/login' && $method === 'POST') {
         exit;
     }
     
+    // Charger tous les utilisateurs (base de données + statiques)
+    $all_users = load_users_from_db();
+    
     // Rechercher l'utilisateur
     $user = null;
-    foreach ($users as $u) {
+    foreach ($all_users as $u) {
         if ($u['email'] === $input['identifier'] || $u['phone'] === $input['identifier']) {
             if (password_verify($input['password'], $u['password'])) {
                 $user = $u;
@@ -289,6 +485,107 @@ if ($uri === '/api/v1/auth/users' && $method === 'GET') {
             'filter_applied' => $role_filter
         ]
     ]);
+    exit;
+}
+
+// -------------------------------
+// Reports (Public Submission)
+// -------------------------------
+if (($uri === '/api/v1/reports' || $uri === '/api/v1/reports/submit') && $method === 'POST') {
+    $raw = file_get_contents('php://input') ?: '';
+    // Debug log for local dev
+    file_put_contents(sys_get_temp_dir() . '/msaada-debug.log', "[".date('c')."] raw_body=".$raw."\n", FILE_APPEND);
+    $input = json_decode($raw, true) ?? [];
+
+    // Very light validation for demo
+    $errors = [];
+    if (!isset($input['violence_type'])) {
+        $errors['violence_type'][] = 'Le type de violence est requis';
+    }
+    if (!isset($input['urgency_level'])) {
+        $errors['urgency_level'][] = 'Le niveau d\'urgence est requis';
+    }
+    if (!isset($input['incident_location'])) {
+        $errors['incident_location'][] = 'La localisation de l\'incident est requise';
+    }
+    if (!isset($input['preferred_contact_method'])) {
+        $errors['preferred_contact_method'][] = 'La méthode de contact est requise';
+    }
+
+    if (!empty($errors)) {
+        http_response_code(422);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Données invalides',
+            'errors' => $errors,
+        ]);
+        exit;
+    }
+
+    // Generate a tracking number
+    $n1 = rand(1000, 9999);
+    $n2 = rand(1000, 9999);
+    $tracking = sprintf('VBG-%d-%d', $n1, $n2);
+
+    $record = [
+        'report_number' => $tracking,
+        'payload' => $input,
+        'created_at' => date('c'),
+    ];
+    store_report($record, $STORE_FILE);
+    // Also try to persist in MySQL if available
+    db_store_report($record);
+
+    echo json_encode([
+        'success' => true,
+        'message' => 'Signalement reçu',
+        'report_number' => $tracking,
+        'data' => [ 'received' => $input ],
+    ]);
+    exit;
+}
+
+// GET report by tracking number (mock)
+if (preg_match('#^/api/v1/reports/(?P<tracking>VBG-\d{4}-\d{4})$#', $uri, $m) && $method === 'GET') {
+    $tracking = $m['tracking'];
+    // Prefer DB if available, fall back to file store
+    $found = db_find_report_by_tracking($tracking);
+    if (!$found) {
+        $found = find_report_by_tracking($tracking, $STORE_FILE);
+    } else {
+        $found['source'] = 'mysql';
+    }
+    if ($found) {
+        echo json_encode([
+            'success' => true,
+            'data' => $found,
+        ]);
+    } else {
+        http_response_code(404);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Signalement introuvable',
+        ]);
+    }
+    exit;
+}
+
+// GET report by tracking number (force DB lookup for verification)
+if (preg_match('#^/api/v1/reports-db/(?P<tracking>VBG-\d{4}-\d{4})$#', $uri, $m) && $method === 'GET') {
+    $tracking = $m['tracking'];
+    $found = db_find_report_by_tracking($tracking);
+    if ($found) {
+        echo json_encode([
+            'success' => true,
+            'data' => $found,
+        ]);
+    } else {
+        http_response_code(404);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Signalement introuvable dans MySQL',
+        ]);
+    }
     exit;
 }
 

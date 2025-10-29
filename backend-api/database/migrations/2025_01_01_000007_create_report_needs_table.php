@@ -32,8 +32,7 @@ return new class extends Migration
             // Contrainte unique pour éviter les doublons
             $table->unique(['report_id', 'need_type']);
             
-            // Check constraint
-            $table->check('priority >= 1 AND priority <= 5');
+            // Note: Check constraints will be added via raw SQL if needed
         });
     }
 

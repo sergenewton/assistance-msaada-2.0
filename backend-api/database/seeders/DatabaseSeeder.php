@@ -17,6 +17,9 @@ class DatabaseSeeder extends Seeder
         // Seeding des rôles et permissions selon les 6 profils définis
         $this->call(RolesAndPermissionsSeeder::class);
         
+        // Création automatique du compte Super Admin
+        $this->call(SuperAdminSeeder::class);
+        
         // Seeding des organisations partenaires
         $this->call(OrganizationsSeeder::class);
         

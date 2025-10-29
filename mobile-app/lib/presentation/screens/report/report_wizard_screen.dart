@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:math';
+ 
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -11,6 +11,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../../core/constants/route_constants.dart';
 import 'report_models.dart';
+import '../../../features/reports/wizard/report_submission_service.dart';
+import '../../../core/error/exceptions.dart';
 
 class ReportWizardScreen extends StatefulWidget {
   const ReportWizardScreen({super.key});
@@ -57,15 +59,23 @@ class _ReportWizardScreenState extends State<ReportWizardScreen> {
       }
     }
     setState(() => _submitting = true);
-    await Future.delayed(const Duration(milliseconds: 900));
-    setState(() => _submitting = false);
-    final n1 = (Random().nextInt(9000) + 1000).toString();
-    final n2 = (Random().nextInt(9000) + 1000).toString();
-    final tracking = 'VBG-$n1-$n2';
-
-    if (!mounted) return;
-    // Navigate using GoRouter to avoid Navigator inconsistencies
-    context.go('${RouteConstants.reportSuccess}?tracking=$tracking');
+    try {
+      final tracking = await submitWizardReport(_data);
+      if (!mounted) return;
+      context.go('${RouteConstants.reportSuccess}?tracking=$tracking');
+    } on AuthenticationException catch (e) {
+      _showStepError(e.message);
+    } on ValidationException catch (e) {
+      _showStepError(e.message);
+    } on ServerException catch (e) {
+      _showStepError(e.message);
+    } on NetworkException catch (e) {
+      _showStepError(e.message);
+    } catch (_) {
+      _showStepError('Une erreur est survenue lors de la soumission. Veuillez réessayer.');
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
   }
 
   void _showStepError(String message) {

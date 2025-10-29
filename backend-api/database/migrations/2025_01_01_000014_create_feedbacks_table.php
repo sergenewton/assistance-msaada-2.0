@@ -31,8 +31,7 @@ return new class extends Migration
             $table->index('submitted_at');
             $table->index(['report_id', 'feedback_type']);
             
-            // Check constraint pour le rating
-            $table->check('rating IS NULL OR (rating >= 1 AND rating <= 5)');
+            // Note: Check constraints will be added via raw SQL if needed
         });
     }
 
