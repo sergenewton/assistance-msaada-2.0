@@ -538,10 +538,12 @@ class _Step2PersonsAndIncidentState extends State<_Step2PersonsAndIncident> {
           // 1) Nominal reporting
           if (d.anonymous == false) ...[
             if (d.reporterRole == ReporterRole.victim) ...[
-              const Text('Votre nom complet'),
               TextFormField(
                 controller: _reporterCtrl,
-                decoration: const InputDecoration(hintText: 'Nom et prénom'),
+                decoration: const InputDecoration(
+                  labelText: 'Votre nom complet',
+                  hintText: 'ex: Furaha Kamara',
+                ),
                 onChanged: (v) {
                   final value = v.isEmpty ? null : v;
                   // Store as both reporter and victim
@@ -554,17 +556,21 @@ class _Step2PersonsAndIncidentState extends State<_Step2PersonsAndIncident> {
               ),
               const SizedBox(height: 12),
             ] else ...[
-              const Text('Votre nom complet (dénonciateur)'),
               TextFormField(
                 controller: _reporterCtrl,
-                decoration: const InputDecoration(hintText: 'Nom et prénom'),
+                decoration: const InputDecoration(
+                  labelText: 'Nom du dénonciateur',
+                  hintText: 'ex: Barna Diakité',
+                ),
                 onChanged: (v) => widget.onChanged(d.copyWith(reporterName: v.isEmpty ? null : v)),
               ),
               const SizedBox(height: 12),
-              const Text('Nom complet de la victime'),
               TextFormField(
                 controller: _victimCtrl,
-                decoration: const InputDecoration(hintText: 'Nom de la victime'),
+                decoration: const InputDecoration(
+                  labelText: 'Nom de la victime',
+                  hintText: 'ex: Marie Durant',
+                ),
                 onChanged: (v) => widget.onChanged(d.copyWith(victimName: v.isEmpty ? null : v)),
               ),
               const SizedBox(height: 12),
@@ -599,10 +605,12 @@ class _Step2PersonsAndIncidentState extends State<_Step2PersonsAndIncident> {
               ),
               const SizedBox(height: 8),
               if (_knowsVictimName) ...[
-                const Text('Nom complet de la victime'),
                 TextFormField(
                   controller: _victimCtrl,
-                  decoration: const InputDecoration(hintText: 'Nom de la victime'),
+                  decoration: const InputDecoration(
+                    labelText: 'Nom de la victime',
+                    hintText: 'ex: Marie Durant',
+                  ),
                   onChanged: (v) => widget.onChanged(d.copyWith(victimName: v.isEmpty ? null : v)),
                 ),
                 const SizedBox(height: 12),
@@ -642,21 +650,21 @@ class _Step2PersonsAndIncidentState extends State<_Step2PersonsAndIncident> {
             ),
           ]),
           const SizedBox(height: 12),
-          const Text('Adresse de l’incident (une ligne)'),
           TextFormField(
             controller: _addressCtrl,
             decoration: const InputDecoration(
-              labelText: 'Adresse',
-              hintText: 'Saisissez l’adresse (ex: Avenue X, Commune Y)',
+              labelText: 'Adresse de l’incident',
+              hintText: 'ex: 123 Rue Principale, avenue des Fleurs, Ville',
             ),
             onChanged: (v) => widget.onChanged(d.copyWith(addressLine: v.isEmpty ? null : v)),
             validator: (v) => (v == null || v.trim().isEmpty) ? 'Requis' : null,
           ),
           const SizedBox(height: 8),
           const Text(
-            'Localisation GPS (si vous êtes sur le lieu ou près de l’incident)',
+            'Localisation GPS ',
             style: TextStyle(fontWeight: FontWeight.w500),
           ),
+           const Text('(si vous êtes sur le lieu ou près de l’incident)'),
           const SizedBox(height: 6),
           OutlinedButton.icon(
             onPressed: _onSendMyLocation,
@@ -694,14 +702,14 @@ class _Step2PersonsAndIncidentState extends State<_Step2PersonsAndIncident> {
               ),
             ),
           const SizedBox(height: 12),
-          const Text('Description de l’incident'),
+
           const SizedBox(height: 6),
           TextFormField(
             controller: _descriptionCtrl,
             maxLines: 5,
             decoration: const InputDecoration(
-              hintText: 'Décrivez ce qui s’est passé (facultatif si audio ajouté)',
-              alignLabelWithHint: true,
+              labelText: 'Description de l’incident',
+              hintText: 'Décrivez ce qui s’est passé',
             ),
             onChanged: (v) => widget.onChanged(d.copyWith(descriptionText: v.isEmpty ? null : v)),
           ),
@@ -856,7 +864,7 @@ class _Step2PersonsAndIncidentState extends State<_Step2PersonsAndIncident> {
           children: [
             Text(_isRecording
                 ? 'Enregistrement en cours…'
-                : (hasAudio ? 'Reprendre' : 'Envoyer un message audio')),
+                : (hasAudio ? 'Reprendre' : 'voulez‑vous enregistrer une description audio ?')),
             if (_isRecording)
               Text(_fmt(_secondsLeft), style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.red)),
           ],
@@ -1086,7 +1094,7 @@ class _Step4EvidenceAndContactState extends State<_Step4EvidenceAndContact> {
             _fileRow(_pathBaseName(d.audioPath!), onRemove: () => widget.onChanged(d.copyWith(audioPath: null))),
           ],
           const SizedBox(height: 16),
-          const Text('Modalités de contact'),
+
           const SizedBox(height: 8),
           TextFormField(
             controller: _phoneCtrl,

@@ -99,10 +99,32 @@ class AuthService {
     this.api.interceptors.response.use(
       (response) => response,
       (error: AxiosError) => {
-        if (error.response?.status === 401) {
-          // Token expiré ou invalide
-          this.clearAuthToken();
-          window.location.href = '/auth/login';
+        const status = error.response?.status;
+        const requestUrl = (error.config?.url || '').toString();
+        const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
+
+        // Requêtes d'auth publique
+        const isAuthPublicRoute =
+          requestUrl.includes('/auth/login') || requestUrl.includes('/auth/register');
+
+        // Page d'auth publique actuellement affichée
+        const isOnAuthPublicPage = currentPath.startsWith('/auth/login') || currentPath.startsWith('/auth/register');
+
+        // Un token était-il présent ?
+        const hadAuthToken = !!this.getStoredToken() || !!(error.config as any)?.headers?.['Authorization'];
+
+        if (status === 401) {
+          // Ne jamais rediriger depuis la page/login/register pour laisser l'UI afficher l'erreur
+          if (isAuthPublicRoute || isOnAuthPublicPage) {
+            return Promise.reject(error);
+          }
+
+          // 401 sur une route protégée avec token => session expirée/invalide
+          if (hadAuthToken) {
+            this.clearAuthToken();
+            window.location.href = '/auth/login';
+            return; // éviter double propagation
+          }
         }
         return Promise.reject(error);
       }

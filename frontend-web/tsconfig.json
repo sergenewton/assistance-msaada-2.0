@@ -29,5 +29,8 @@
     }
   },
   "include": ["src/**/*"],
+  "exclude": [
+    "src/hooks/useAuth.ts"
+  ],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

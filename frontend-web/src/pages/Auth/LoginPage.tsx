@@ -76,6 +76,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     }
   }, [identifierValue, passwordValue, error, clearError]);
 
+  // S'assurer que toute session précédente ne perturbe pas l'affichage des erreurs
+  React.useEffect(() => {
+    // En arrivant sur la page de login, on nettoie les tokens résiduels
+    authService.clearAuthToken();
+  }, []);
+
   const onSubmit = async (data: LoginFormData) => {
     try {
       // Effacer les erreurs précédentes avant de tenter la connexion
