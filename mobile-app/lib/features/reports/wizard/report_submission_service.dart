@@ -1,4 +1,6 @@
 import 'dart:math';
+import 'dart:io' show File;
+import 'package:http_parser/http_parser.dart' show MediaType;
 
 import 'package:dio/dio.dart';
 
@@ -13,9 +15,15 @@ import '../../../presentation/screens/report/report_models.dart';
 Future<String> submitWizardReport(ReportFormData data) async {
   // Public submission: no authentication required
   final client = ApiClient();
-  final payload = _buildPayload(data);
 
-  Future<Map<String, dynamic>> _tryPost(String path) async {
+  // If any binary attachments are present, use multipart upload, else JSON
+  final hasPhotos = data.photoPaths.isNotEmpty;
+  final hasEvidenceAudio = data.audioPath != null && data.audioPath!.trim().isNotEmpty;
+  final hasDescriptionAudio = data.descriptionAudioPath != null && data.descriptionAudioPath!.trim().isNotEmpty;
+  final hasFiles = hasPhotos || hasEvidenceAudio || hasDescriptionAudio;
+
+  Future<Map<String, dynamic>> _tryPostJson(String path) async {
+    final payload = _buildPayload(data);
     final res = await client.post<Map<String, dynamic>>(
       path,
       data: payload,
@@ -24,15 +32,28 @@ Future<String> submitWizardReport(ReportFormData data) async {
     return res.data ?? <String, dynamic>{};
   }
 
+  Future<Map<String, dynamic>> _tryPostMultipart(String path) async {
+    final form = await _buildMultipart(data);
+    final res = await client.post<Map<String, dynamic>>(
+      path,
+      data: form,
+      options: Options(contentType: 'multipart/form-data'),
+    );
+    return res.data ?? <String, dynamic>{};
+  }
+
   try {
-    // Prefer public endpoint if available
     Map<String, dynamic> body;
     try {
-      body = await _tryPost(ApiConstants.submitReport);
+      body = hasFiles
+          ? await _tryPostMultipart(ApiConstants.submitReport)
+          : await _tryPostJson(ApiConstants.submitReport);
     } on ServerException catch (se) {
       // Fallback to generic /reports if submit path is not found/method not allowed
       if (se.statusCode == 404 || se.statusCode == 405) {
-        body = await _tryPost(ApiConstants.reports);
+        body = hasFiles
+            ? await _tryPostMultipart(ApiConstants.reports)
+            : await _tryPostJson(ApiConstants.reports);
       } else {
         rethrow;
       }
@@ -243,4 +264,105 @@ String _fallbackTracking() {
   final n1 = (Random().nextInt(9000) + 1000).toString();
   final n2 = (Random().nextInt(9000) + 1000).toString();
   return 'VBG-$n1-$n2';
+}
+
+/// Build a multipart form with text fields flattened and files attached.
+/// For arrays, this uses the `field[]` convention commonly supported by backends.
+Future<FormData> _buildMultipart(ReportFormData d) async {
+  final payload = _buildPayload(d);
+
+  // Remove the non-multipart-friendly attachments summary if present
+  payload.remove('attachments');
+
+  final form = FormData();
+
+  void addField(String key, dynamic value) {
+    if (value == null) return;
+    if (value is List) {
+      for (final v in value) {
+        addField('${key}[]', v);
+      }
+    } else if (value is Map<String, dynamic>) {
+      // Flatten one level using dot-notation
+      value.forEach((k, v) => addField('$key.$k', v));
+    } else {
+      form.fields.add(MapEntry(key, value.toString())) ;
+    }
+  }
+
+  // Add all text fields
+  payload.forEach((k, v) => addField(k, v));
+
+  // Attach photos (max 5 already enforced in UI)
+  for (final p in d.photoPaths) {
+    try {
+      if (p.trim().isEmpty) continue;
+      // On mobile, use File; on web, skip (not supported in this implementation)
+      final file = File(p);
+      if (await file.exists()) {
+        form.files.add(MapEntry(
+          'photos[]',
+          await MultipartFile.fromFile(
+            file.path,
+            filename: _basename(file.path),
+            contentType: MediaType('image', _inferImageSubtype(file.path)),
+          ),
+        ));
+      }
+    } catch (_) { /* ignore individual file errors */ }
+  }
+
+  // Attach description audio (step 2 recording)
+  if (d.descriptionAudioPath != null && d.descriptionAudioPath!.trim().isNotEmpty) {
+    try {
+      final file = File(d.descriptionAudioPath!);
+      if (await file.exists()) {
+        form.files.add(MapEntry(
+          'description_audio',
+          await MultipartFile.fromFile(
+            file.path,
+            filename: _basename(file.path),
+            contentType: MediaType('audio', _inferAudioSubtype(file.path)),
+          ),
+        ));
+      }
+    } catch (_) {}
+  }
+
+  // Attach evidence audio (step 4 file)
+  if (d.audioPath != null && d.audioPath!.trim().isNotEmpty) {
+    try {
+      final file = File(d.audioPath!);
+      if (await file.exists()) {
+        form.files.add(MapEntry(
+          'audio_evidence',
+          await MultipartFile.fromFile(
+            file.path,
+            filename: _basename(file.path),
+            contentType: MediaType('audio', _inferAudioSubtype(file.path)),
+          ),
+        ));
+      }
+    } catch (_) {}
+  }
+
+  return form;
+}
+
+String _inferImageSubtype(String path) {
+  final lower = path.toLowerCase();
+  if (lower.endsWith('.png')) return 'png';
+  if (lower.endsWith('.webp')) return 'webp';
+  if (lower.endsWith('.gif')) return 'gif';
+  return 'jpeg';
+}
+
+String _inferAudioSubtype(String path) {
+  final lower = path.toLowerCase();
+  if (lower.endsWith('.m4a')) return 'm4a';
+  if (lower.endsWith('.aac')) return 'aac';
+  if (lower.endsWith('.wav')) return 'wav';
+  if (lower.endsWith('.ogg')) return 'ogg';
+  if (lower.endsWith('.mp3')) return 'mpeg';
+  return 'mpeg';
 }
