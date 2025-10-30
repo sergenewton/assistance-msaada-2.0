@@ -492,10 +492,57 @@ if ($uri === '/api/v1/auth/users' && $method === 'GET') {
 // Reports (Public Submission)
 // -------------------------------
 if (($uri === '/api/v1/reports' || $uri === '/api/v1/reports/submit') && $method === 'POST') {
+    $contentType = isset($_SERVER['CONTENT_TYPE']) ? strtolower($_SERVER['CONTENT_TYPE']) : '';
     $raw = file_get_contents('php://input') ?: '';
     // Debug log for local dev
-    file_put_contents(sys_get_temp_dir() . '/msaada-debug.log', "[".date('c')."] raw_body=".$raw."\n", FILE_APPEND);
-    $input = json_decode($raw, true) ?? [];
+    file_put_contents(sys_get_temp_dir() . '/msaada-debug.log', "[".date('c')."] CT=".$contentType." raw_len=".strlen($raw)." post_count=".count($_POST)." files_count=".count($_FILES)."\n", FILE_APPEND);
+
+    $input = [];
+    if (strpos($contentType, 'application/json') === 0) {
+        $input = json_decode($raw, true) ?? [];
+    } elseif (strpos($contentType, 'multipart/form-data') === 0 || strpos($contentType, 'application/x-www-form-urlencoded') === 0) {
+        // Build from POST fields
+        $input = $_POST;
+        // Normalize arrays named with [] (PHP already groups them into arrays)
+        // Optionally, capture uploaded files metadata
+        if (!empty($_FILES)) {
+            $files = [];
+            foreach ($_FILES as $field => $info) {
+                // Support both single and multiple files
+                if (is_array($info['name'])) {
+                    $names = $info['name'];
+                    $tmp_names = $info['tmp_name'];
+                    $types = $info['type'];
+                    $sizes = $info['size'];
+                    $errs = $info['error'];
+                    $arr = [];
+                    foreach ($names as $i => $n) {
+                        $arr[] = [
+                            'name' => $n,
+                            'type' => $types[$i] ?? null,
+                            'size' => $sizes[$i] ?? null,
+                            'error' => $errs[$i] ?? null,
+                            'tmp_name' => $tmp_names[$i] ?? null,
+                        ];
+                    }
+                    $files[$field] = $arr;
+                } else {
+                    $files[$field] = [
+                        'name' => $info['name'] ?? null,
+                        'type' => $info['type'] ?? null,
+                        'size' => $info['size'] ?? null,
+                        'error' => $info['error'] ?? null,
+                        'tmp_name' => $info['tmp_name'] ?? null,
+                    ];
+                }
+            }
+            // Attach a lightweight representation of files to the payload for traceability
+            $input['_attachments'] = $files;
+        }
+    } else {
+        // Fallback: try to decode as JSON, else empty array
+        $input = json_decode($raw, true) ?? [];
+    }
 
     // Very light validation for demo
     $errors = [];

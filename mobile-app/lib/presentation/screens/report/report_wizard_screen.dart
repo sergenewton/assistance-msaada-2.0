@@ -6,9 +6,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_sound/flutter_sound.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:record/record.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:path_provider/path_provider.dart';
 import '../../../core/constants/route_constants.dart';
 import 'report_models.dart';
 import '../../../features/reports/wizard/report_submission_service.dart';
@@ -479,7 +480,7 @@ class _Step2PersonsAndIncidentState extends State<_Step2PersonsAndIncident> {
   final _descriptionCtrl = TextEditingController();
 
   // Audio description (optional)
-  final FlutterSoundRecorder _recorder = FlutterSoundRecorder();
+  final AudioRecorder _recorder = AudioRecorder();
   bool _recorderReady = false;
   bool _isRecording = false;
   bool _gpsSuccess = false;
@@ -512,10 +513,8 @@ class _Step2PersonsAndIncidentState extends State<_Step2PersonsAndIncident> {
     _victimCtrl.dispose();
     _descriptionCtrl.dispose();
     _addressCtrl.dispose();
-    // Close recorder
-    if (_recorderReady) {
-      _recorder.closeRecorder();
-    }
+    // Dispose recorder
+    _recorder.dispose();
     if (_playerReady) {
       _player.closePlayer();
     }
@@ -738,14 +737,11 @@ class _Step2PersonsAndIncidentState extends State<_Step2PersonsAndIncident> {
 
   Future<void> _initRecorder() async {
     try {
-      if (!kIsWeb) {
-        final status = await Permission.microphone.request();
-        if (!status.isGranted) {
-          setState(() => _recorderReady = false);
-          return;
-        }
+  final hasPerm = await _recorder.hasPermission();
+      if (!hasPerm) {
+        setState(() => _recorderReady = false);
+        return;
       }
-      await _recorder.openRecorder();
       setState(() => _recorderReady = true);
     } catch (_) {
       setState(() => _recorderReady = false);
@@ -780,10 +776,24 @@ class _Step2PersonsAndIncidentState extends State<_Step2PersonsAndIncident> {
     return '$m:$ss';
   }
 
+  // Ensure audio records into a valid temp location accessible by the app (Android/iOS/Web)
+  Future<String> _getTempFilePath() async {
+    final dir = await getTemporaryDirectory();
+    return '${dir.path}/desc_${DateTime.now().millisecondsSinceEpoch}.m4a';
+  }
+
   Future<void> _startRecording() async {
     if (!_recorderReady) return;
     try {
-      await _recorder.startRecorder(toFile: 'desc_${DateTime.now().millisecondsSinceEpoch}.m4a');
+      final path = await _getTempFilePath();
+      await _recorder.start(
+        const RecordConfig(
+          encoder: AudioEncoder.aacLc,
+          bitRate: 128000,
+          sampleRate: 44100,
+        ),
+        path: path,
+      );
       setState(() => _isRecording = true);
       _startCountdown();
     } catch (_) {
@@ -794,7 +804,7 @@ class _Step2PersonsAndIncidentState extends State<_Step2PersonsAndIncident> {
   Future<void> _stopRecording({bool save = true}) async {
     if (!_recorderReady) return;
     try {
-      final path = await _recorder.stopRecorder();
+  final path = await _recorder.stop();
       _timer?.cancel();
       setState(() => _isRecording = false);
       if (save && path != null && mounted) {
@@ -834,52 +844,70 @@ class _Step2PersonsAndIncidentState extends State<_Step2PersonsAndIncident> {
     final hasAudio = d.descriptionAudioPath != null;
     return Row(
       children: [
-        // Round red record/pause button
-        GestureDetector(
-          onLongPressStart: (_) async {
-            if (!_isRecording) {
+        // Record/stop button (tap to toggle)
+        InkWell(
+          onTap: () async {
+            if (_isRecording) {
+              await _stopRecording(save: true);
+            } else {
               await _startRecording();
             }
           },
-          onLongPressEnd: (_) async {
-            if (_isRecording) {
-              await _stopRecording(save: true);
-            }
-          },
+          customBorder: const CircleBorder(),
           child: Container(
             width: 56,
             height: 56,
             decoration: BoxDecoration(
               color: _isRecording ? Colors.orange : Colors.red,
               shape: BoxShape.circle,
+              boxShadow: [
+                if (_isRecording)
+                  const BoxShadow(color: Colors.orangeAccent, blurRadius: 8, spreadRadius: 2),
+              ],
             ),
             alignment: Alignment.center,
-            child: const Icon(Icons.mic, color: Colors.white),
+            child: Icon(_isRecording ? Icons.stop : Icons.mic, color: Colors.white),
           ),
         ),
         const SizedBox(width: 12),
         // Label and countdown
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(_isRecording
-                ? 'Enregistrement en cours…'
-                : (hasAudio ? 'Reprendre' : 'voulez‑vous enregistrer une description audio ?')),
-            if (_isRecording)
-              Text(_fmt(_secondsLeft), style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.red)),
-          ],
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _isRecording
+                    ? 'Enregistrement en cours…'
+                    : (hasAudio
+                        ? 'Un message audio est enregistré'
+                        : 'Voulez-vous enregistrer une description audio ?'),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              if (_isRecording)
+                Text(
+                  _fmt(_secondsLeft),
+                  style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.red),
+                ),
+            ],
+          ),
         ),
         const SizedBox(width: 12),
         if (hasAudio) ...[
-          IconButton(
-            onPressed: _togglePlay,
-            icon: Icon(_isPlaying ? Icons.stop : Icons.play_arrow),
-            tooltip: _isPlaying ? 'Stop' : 'Lire',
-          ),
-          IconButton(
-            onPressed: _deleteAudio,
-            icon: const Icon(Icons.delete_outline),
-            tooltip: 'Supprimer',
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                onPressed: _togglePlay,
+                icon: Icon(_isPlaying ? Icons.stop : Icons.play_arrow),
+                tooltip: _isPlaying ? 'Stop' : 'Lire',
+              ),
+              IconButton(
+                onPressed: _deleteAudio,
+                icon: const Icon(Icons.delete_outline),
+                tooltip: 'Supprimer',
+              ),
+            ],
           ),
         ],
       ],
@@ -1042,7 +1070,74 @@ class _Step4EvidenceAndContactState extends State<_Step4EvidenceAndContact> {
           const Text('Étape 4 : Preuves et contact sécurisé',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
           const SizedBox(height: 12),
-          const Text('Preuves (optionnel)'),
+          // 1) Numéro de contact
+          TextFormField(
+            controller: _phoneCtrl,
+            keyboardType: TextInputType.phone,
+            decoration: const InputDecoration(
+              labelText: 'Numéro de contact',
+              hintText: 'Ex: +243 99 123 45 67',
+            ),
+            onChanged: (v) => widget.onChanged(d.copyWith(contactNumber: v)),
+            validator: (v) => (v == null || v.trim().isEmpty) ? 'Requis' : null,
+          ),
+          const SizedBox(height: 12),
+          // 2) Mot de code de sécurité (optionnel)
+          Row(
+            children: [
+              const Text('Mot de code de sécurité', style: TextStyle(fontWeight: FontWeight.w600)),
+              const SizedBox(width: 8),
+              _optionalBadge(),
+            ],
+          ),
+          TextFormField(
+            controller: _codeCtrl,
+            onChanged: (v) => widget.onChanged(d.copyWith(securityCode: v.isEmpty ? null : v)),
+            decoration: const InputDecoration(hintText: 'Ex: Soleil'),
+          ),
+          const SizedBox(height: 12),
+          // 3) Préférences de contact (multi-sélection)
+          const Text('Préférences de contact (multi-sélection)'),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: ContactPref.values.map((c) {
+              final selected = d.contactPrefs.contains(c);
+              return _PillOption(
+                label: _cLabel(c),
+                selected: selected,
+                onTap: () {
+                  final set = {...d.contactPrefs};
+                  selected ? set.remove(c) : set.add(c);
+                  widget.onChanged(d.copyWith(contactPrefs: set));
+                },
+                multi: true,
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 12),
+          // Horaires préférés (lié aux préférences de contact)
+          const Text('Horaires préférés'),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: TimePref.values
+                .map((t) => _PillOption(
+                      label: _tLabel(t),
+                      selected: d.timePref == t,
+                      onTap: () => widget.onChanged(d.copyWith(timePref: t)),
+                    ))
+                .toList(),
+          ),
+          const SizedBox(height: 12),
+          // 4) Preuves (optionnelles)
+          Row(
+            children: [
+              const Text('Preuves', style: TextStyle(fontWeight: FontWeight.w600)),
+              const SizedBox(width: 8),
+              _optionalBadge(),
+            ],
+          ),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
@@ -1093,58 +1188,6 @@ class _Step4EvidenceAndContactState extends State<_Step4EvidenceAndContact> {
             const SizedBox(height: 4),
             _fileRow(_pathBaseName(d.audioPath!), onRemove: () => widget.onChanged(d.copyWith(audioPath: null))),
           ],
-          const SizedBox(height: 16),
-
-          const SizedBox(height: 8),
-          TextFormField(
-            controller: _phoneCtrl,
-            keyboardType: TextInputType.phone,
-            decoration: const InputDecoration(
-              labelText: 'Numéro de contact',
-              hintText: 'Ex: +243 99 123 45 67',
-            ),
-            onChanged: (v) => widget.onChanged(d.copyWith(contactNumber: v)),
-            validator: (v) => (v == null || v.trim().isEmpty) ? 'Requis' : null,
-          ),
-          const SizedBox(height: 12),
-          const Text('Préférences de contact (multi-sélection)'),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: ContactPref.values.map((c) {
-              final selected = d.contactPrefs.contains(c);
-              return _PillOption(
-                label: _cLabel(c),
-                selected: selected,
-                onTap: () {
-                  final set = {...d.contactPrefs};
-                  selected ? set.remove(c) : set.add(c);
-                  widget.onChanged(d.copyWith(contactPrefs: set));
-                },
-                multi: true,
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 12),
-          const Text('Horaires préférés'),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: TimePref.values
-                .map((t) => _PillOption(
-                      label: _tLabel(t),
-                      selected: d.timePref == t,
-                      onTap: () => widget.onChanged(d.copyWith(timePref: t)),
-                    ))
-                .toList(),
-          ),
-          const SizedBox(height: 12),
-          const Text('Mot de code de sécurité (optionnel)'),
-          TextFormField(
-            controller: _codeCtrl,
-            onChanged: (v) => widget.onChanged(d.copyWith(securityCode: v.isEmpty ? null : v)),
-            decoration: const InputDecoration(hintText: 'Ex: Soleil'),
-          ),
           const SizedBox(height: 8),
           const Text(
             '💡 Vous pouvez choisir de ne pas être contacté en sélectionnant “In-app” ou “Aucun”.',
@@ -1369,6 +1412,22 @@ Widget _fileRow(String name, {VoidCallback? onRemove}) {
 String _pathBaseName(String p) {
   final parts = p.split(RegExp(r'[\\/]'));
   return parts.isNotEmpty ? parts.last : p;
+}
+
+// Small badge '(optionnel)' used in Step 4
+Widget _optionalBadge() {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    decoration: BoxDecoration(
+      color: Colors.grey.shade200,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: Colors.grey.shade300),
+    ),
+    child: const Text(
+      '(optionnel)',
+      style: TextStyle(fontSize: 12, color: Colors.black54, fontWeight: FontWeight.w600),
+    ),
+  );
 }
 
 // Small square photo thumbnail using XFile bytes (works on mobile and web)
