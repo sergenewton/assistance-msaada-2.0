@@ -64,17 +64,23 @@ export const StatsCard: React.FC<StatsCardProps> = ({
   return (
     <div 
       className={`
-        bg-white dark:bg-gray-800 rounded-lg shadow-sm border ${colors.border} p-6
-        ${onClick ? 'cursor-pointer hover:shadow-md transition-shadow duration-200' : ''}
+        group
+        bg-white dark:bg-gray-800 rounded-xl shadow-sm border ${colors.border} 
+        p-4 sm:p-6
+        transition-all duration-300 ease-in-out
+        hover:shadow-lg hover:-translate-y-1 hover:ring-2 hover:ring-blue-500 hover:ring-opacity-20
+        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50
+        ${onClick ? 'cursor-pointer' : ''}
       `}
       onClick={onClick}
+      tabIndex={onClick ? 0 : undefined}
     >
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
+          <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-1 truncate">
             {title}
           </p>
-          <p className="text-3xl font-bold text-gray-900 dark:text-white">
+          <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
             {value}
           </p>
           {trend && (
@@ -88,8 +94,8 @@ export const StatsCard: React.FC<StatsCardProps> = ({
           )}
         </div>
         
-        <div className={`w-12 h-12 ${colors.bgLight} rounded-lg flex items-center justify-center`}>
-          <i className={`${icon} text-xl ${colors.text}`}></i>
+        <div className={`w-10 h-10 sm:w-12 sm:h-12 ${colors.bgLight} rounded-lg flex items-center justify-center transition-all duration-200 group-hover:scale-110`}>
+          <i className={`${icon} text-lg sm:text-xl ${colors.text} transition-colors duration-200`} style={{strokeWidth: '1.5px'}}></i>
         </div>
       </div>
     </div>

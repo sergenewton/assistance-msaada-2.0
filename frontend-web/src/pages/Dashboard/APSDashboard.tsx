@@ -241,7 +241,7 @@ export const APSDashboard: React.FC = () => {
       userRole="aps"
     >
       {/* Statistiques rapides */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 sm:gap-6 mb-8 transition-all duration-300 ease-in-out">
         <StatsCard
           title="Cas assignés"
           value={stats.activeCases}
@@ -272,7 +272,7 @@ export const APSDashboard: React.FC = () => {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 mb-8 transition-all duration-300 ease-in-out">
         {/* Cas récents */}
         <RecentCases
           cases={recentCases}
@@ -328,7 +328,7 @@ export const APSDashboard: React.FC = () => {
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
           Modules disponibles
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-4 sm:gap-6 transition-all duration-300 ease-in-out">
           {APSModules.map((module) => (
             <ModuleCard
               key={module.id}

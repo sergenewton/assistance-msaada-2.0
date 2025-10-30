@@ -397,7 +397,7 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
       {/* Statistiques globales */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 sm:gap-6 mb-8 transition-all duration-300 ease-in-out">
         <StatsCard
           title="Total des cas"
           value={stats.totalCases}
@@ -438,7 +438,7 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
       {/* Alertes administratives */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8 transition-all duration-300 ease-in-out">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             <i className="fas fa-exclamation-triangle text-red-500 mr-2"></i>
@@ -506,7 +506,7 @@ export const AdminDashboard: React.FC = () => {
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
           Actions rapides d'administration
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-4 sm:gap-6 transition-all duration-300 ease-in-out">
           <button className="p-4 text-left bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
             <i className="fas fa-user-plus text-blue-600 text-2xl mb-2"></i>
             <p className="font-medium text-blue-900">Créer un utilisateur</p>

@@ -1,0 +1,202 @@
+/* Dashboard Responsive Styles avec Tailwind CSS */
+
+/* Background moderne et arrière-plan */
+.dashboard-container {
+  background: #F8F9FB;
+  min-height: 100vh;
+  transition: background-color 0.3s ease;
+}
+
+/* Dark mode */
+.dark .dashboard-container {
+  background: #0f172a;
+}
+
+/* Cartes modernes avec animations */
+.dashboard-card {
+  @apply bg-white dark:bg-gray-800;
+  @apply rounded-xl;
+  @apply shadow-sm hover:shadow-lg;
+  @apply border border-gray-100 dark:border-gray-700;
+  @apply p-6;
+  @apply transition-all duration-300 ease-in-out;
+  @apply hover:-translate-y-1;
+  @apply cursor-pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard-card:hover {
+  @apply ring-2 ring-blue-500 ring-opacity-20;
+}
+
+/* Styles pour les icônes outline */
+.dashboard-icon {
+  @apply w-12 h-12;
+  @apply p-3;
+  @apply bg-gray-50 dark:bg-gray-700;
+  @apply rounded-lg;
+  @apply flex items-center justify-center;
+  @apply transition-all duration-200;
+  stroke-width: 1.5;
+}
+
+.dashboard-card:hover .dashboard-icon {
+  @apply bg-blue-50 dark:bg-blue-900/20;
+  @apply text-blue-600 dark:text-blue-400;
+  @apply scale-110;
+}
+
+/* Grilles responsives avec classes Tailwind */
+.stats-grid {
+  @apply grid gap-4;
+  @apply grid-cols-1;          /* Mobile: 1 colonne */
+  @apply sm:grid-cols-2;       /* Small: 2 colonnes */
+  @apply md:grid-cols-3;       /* Medium: 3 colonnes */
+  @apply lg:grid-cols-4;       /* Large: 4 colonnes */
+  @apply xl:grid-cols-6;       /* Extra Large: 6 colonnes */
+}
+
+.cards-grid {
+  @apply grid gap-6;
+  @apply grid-cols-1;          /* Mobile: 1 colonne */
+  @apply sm:grid-cols-2;       /* Small: 2 colonnes */
+  @apply md:grid-cols-3;       /* Medium: 3 colonnes */
+  @apply lg:grid-cols-4;       /* Large: 4 colonnes */
+  @apply xl:grid-cols-5;       /* Extra Large: 5 colonnes */
+}
+
+.modules-grid {
+  @apply grid gap-6;
+  @apply grid-cols-1;          /* Mobile: 1 colonne */
+  @apply sm:grid-cols-2;       /* Small: 2 colonnes */
+  @apply md:grid-cols-4;       /* Medium: 4 colonnes */
+  @apply xl:grid-cols-6;       /* Extra Large: 6 colonnes */
+}
+
+/* Typography responsive */
+.dashboard-title {
+  @apply text-2xl font-bold;
+  @apply sm:text-3xl;
+  @apply md:text-4xl;
+}
+
+.dashboard-subtitle {
+  @apply text-base;
+  @apply sm:text-lg;
+  @apply md:text-xl;
+}
+
+.card-title {
+  @apply text-lg font-semibold;
+  @apply sm:text-xl;
+}
+
+.card-description {
+  @apply text-sm;
+  @apply sm:text-base;
+}
+
+/* Animations fluides */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.4s ease-out;
+}
+
+/* Animation de grille avec délai */
+.stats-grid > * {
+  animation: fadeInUp 0.6s ease-out;
+  animation-fill-mode: both;
+}
+
+.stats-grid > :nth-child(1) { animation-delay: 0.1s; }
+.stats-grid > :nth-child(2) { animation-delay: 0.2s; }
+.stats-grid > :nth-child(3) { animation-delay: 0.3s; }
+.stats-grid > :nth-child(4) { animation-delay: 0.4s; }
+.stats-grid > :nth-child(5) { animation-delay: 0.5s; }
+.stats-grid > :nth-child(6) { animation-delay: 0.6s; }
+
+.cards-grid > * {
+  animation: scaleIn 0.4s ease-out;
+  animation-fill-mode: both;
+}
+
+.cards-grid > :nth-child(1) { animation-delay: 0.1s; }
+.cards-grid > :nth-child(2) { animation-delay: 0.15s; }
+.cards-grid > :nth-child(3) { animation-delay: 0.2s; }
+.cards-grid > :nth-child(4) { animation-delay: 0.25s; }
+.cards-grid > :nth-child(5) { animation-delay: 0.3s; }
+
+/* Transitions pour le redimensionnement */
+@media (prefers-reduced-motion: no-preference) {
+  .stats-grid,
+  .cards-grid,
+  .modules-grid {
+    transition: grid-template-columns 0.3s ease;
+  }
+}
+
+/* Focus et accessibilité */
+.dashboard-card:focus {
+  @apply outline-none ring-2 ring-blue-500 ring-opacity-50;
+}
+
+/* Navigation mobile améliorée */
+@media (max-width: 767px) {
+  .sidebar-mobile {
+    @apply fixed top-0 left-0 h-screen w-4/5 max-w-sm z-50;
+    @apply transform -translate-x-full transition-transform duration-300 ease-in-out;
+  }
+  
+  .sidebar-mobile.open {
+    @apply translate-x-0;
+  }
+  
+  .sidebar-overlay {
+    @apply fixed inset-0 bg-black bg-opacity-50 z-40;
+    @apply opacity-0 pointer-events-none transition-opacity duration-300;
+  }
+  
+  .sidebar-overlay.open {
+    @apply opacity-100 pointer-events-auto;
+  }
+}
+
+/* Responsive spacing */
+.dashboard-spacing {
+  @apply p-4 sm:p-6 lg:p-8;
+}
+
+.card-spacing {
+  @apply p-4 sm:p-6;
+}
+
+/* Responsive gaps */
+.gap-responsive {
+  @apply gap-4 sm:gap-6 lg:gap-8;
+}
