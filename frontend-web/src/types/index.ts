@@ -95,3 +95,6 @@ export interface MenuItem {
   children?: MenuItem[]
   permissions?: string[]
 }
+
+// Re-export dashboard types
+export * from './dashboard';

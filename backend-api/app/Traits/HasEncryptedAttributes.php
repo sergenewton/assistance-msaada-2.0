@@ -8,9 +8,13 @@ use Illuminate\Contracts\Encryption\DecryptException;
 trait HasEncryptedAttributes
 {
     /**
-     * Attributs qui doivent être chiffrés
+     * Obtient les attributs qui doivent être chiffrés
+     * Cette méthode doit être définie dans la classe qui utilise le trait
      */
-    protected $encrypted = [];
+    protected function getEncryptedAttributes()
+    {
+        return property_exists($this, 'encrypted') ? $this->encrypted : [];
+    }
 
     /**
      * Boot du trait
@@ -31,7 +35,7 @@ trait HasEncryptedAttributes
      */
     protected function encryptAttributes()
     {
-        foreach ($this->encrypted as $attribute) {
+        foreach ($this->getEncryptedAttributes() as $attribute) {
             if (isset($this->attributes[$attribute]) && !empty($this->attributes[$attribute])) {
                 $this->attributes[$attribute] = Crypt::encryptString($this->attributes[$attribute]);
             }
@@ -43,7 +47,7 @@ trait HasEncryptedAttributes
      */
     protected function decryptAttributes()
     {
-        foreach ($this->encrypted as $attribute) {
+        foreach ($this->getEncryptedAttributes() as $attribute) {
             if (isset($this->attributes[$attribute]) && !empty($this->attributes[$attribute])) {
                 try {
                     $this->attributes[$attribute] = Crypt::decryptString($this->attributes[$attribute]);

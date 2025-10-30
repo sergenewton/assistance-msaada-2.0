@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App.tsx'
 import './assets/styles/index-fixed.css'
 import './assets/styles/desktop-enhancements.css'
+import './assets/styles/sidebar-enhanced.css'
 
 // Configure theme
 const root = document.documentElement

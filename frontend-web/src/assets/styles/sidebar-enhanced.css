@@ -1,0 +1,138 @@
+/* Styles pour la sidebar améliorée */
+
+/* Transitions fluides pour la sidebar */
+.sidebar-transition {
+  transition: width 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Tooltip pour la sidebar collapsée */
+.sidebar-tooltip {
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: #1f2937;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  white-space: nowrap;
+  z-index: 1000;
+  margin-left: 8px;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 200ms ease-in-out;
+  pointer-events: none;
+}
+
+.sidebar-tooltip::before {
+  content: '';
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 4px solid transparent;
+  border-right-color: #1f2937;
+}
+
+.sidebar-item:hover .sidebar-tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Animation pour les icônes de groupe */
+.group-icon {
+  transition: transform 200ms ease-in-out;
+}
+
+.group-expanded .group-icon {
+  transform: rotate(90deg);
+}
+
+/* Styles pour les éléments de groupe */
+.group-item:hover {
+  background: linear-gradient(90deg, #374151 0%, #4b5563 100%);
+}
+
+/* Animation de rotation pour les flèches */
+.rotate-90 {
+  transform: rotate(90deg);
+}
+
+/* Scrollbar personnalisée pour la navigation */
+.sidebar-nav::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar-nav::-webkit-scrollbar-track {
+  background: #374151;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: #6b7280;
+  border-radius: 2px;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+/* Styles pour les éléments actifs */
+.nav-item-active {
+  background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+  color: white;
+}
+
+/* Bordure animée pour l'élément actif */
+.nav-item-active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: #34d399;
+  border-radius: 0 2px 2px 0;
+}
+
+/* Animation du toggle button */
+.toggle-button {
+  transition: transform 200ms ease-in-out;
+}
+
+.toggle-button:hover {
+  transform: scale(1.1);
+}
+
+/* Badge notifications */
+.notification-badge {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .sidebar-tooltip {
+    display: none;
+  }
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  .sidebar-tooltip {
+    background-color: #111827;
+  }
+  
+  .sidebar-tooltip::before {
+    border-right-color: #111827;
+  }
+}
