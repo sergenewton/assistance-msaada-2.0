@@ -5,6 +5,7 @@ import App from './App.tsx'
 import './assets/styles/index-fixed.css'
 import './assets/styles/desktop-enhancements.css'
 import './assets/styles/sidebar-enhanced.css'
+import 'leaflet/dist/leaflet.css'
 
 // Configure theme
 const root = document.documentElement

@@ -4,6 +4,7 @@ import { CasesTable } from '@/components/Triage/CasesTable';
 import { CaseOverview } from '@/types/dashboard';
 import { reportsService } from '@/services/reportsService';
 import { OperatorNavigation } from '@/pages/Dashboard/OperatorDashboard';
+import { List } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 // Données réelles chargées depuis l'API
@@ -61,11 +62,17 @@ export const OperatorTriageUnprocessed: React.FC = () => {
           {error}
         </div>
       ) : (
-        <CasesTable
-          cases={cases}
-          onVoir={handleVoir}
-          onTraitement={handleTraitement}
-        />
+        <section className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 p-4">
+          <div className="-mx-4 -mt-4 mb-3 px-4 py-2 bg-success-600 dark:bg-success-700 text-white rounded-t-md flex items-center gap-2">
+            <List className="w-4 h-4" />
+            <h3 className="text-sm font-semibold">Non traités</h3>
+          </div>
+          <CasesTable
+            cases={cases}
+            onVoir={handleVoir}
+            onTraitement={handleTraitement}
+          />
+        </section>
       )}
     </DashboardLayout>
   );
