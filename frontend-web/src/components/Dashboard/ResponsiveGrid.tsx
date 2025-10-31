@@ -14,7 +14,7 @@ export const ResponsiveGrid: React.FC<ResponsiveGridProps> = ({
   gap = 'medium'
 }) => {
   const gapClasses = {
-    small: 'gap-3',
+    small: 'gap-2',
     medium: 'gap-4 sm:gap-6',
     large: 'gap-6 sm:gap-8'
   };
@@ -32,7 +32,7 @@ export const ResponsiveGrid: React.FC<ResponsiveGridProps> = ({
     `,
     modules: `
       grid ${gapClasses[gap]}
-      grid-cols-1 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-6
+      grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4
       transition-all duration-300 ease-in-out
     `,
     custom: `

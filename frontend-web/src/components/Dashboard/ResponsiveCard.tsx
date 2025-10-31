@@ -32,9 +32,9 @@ export const ResponsiveCard: React.FC<ResponsiveCardProps> = ({
   size = 'md'
 }) => {
   const sizeClasses = {
-    sm: 'p-4',
-    md: 'p-6',
-    lg: 'p-8'
+    sm: 'p-1',
+    md: 'p-2',
+    lg: 'p-4'
   };
 
   const cardClasses = `

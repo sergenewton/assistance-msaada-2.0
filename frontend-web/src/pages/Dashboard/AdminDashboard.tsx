@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { Loader2, Circle, AlertTriangle, ListChecks, BarChart2, UserPlus, Building as BuildingIcon, Database as DatabaseIcon } from 'lucide-react';
 import { DashboardLayout } from '@/components/Layout/DashboardLayout';
 import { StatsCard } from '@/components/Dashboard/StatsCard';
 import { ModuleCard } from '@/components/Dashboard/ModuleCard';
+import { ResponsiveGrid } from '@/components/Dashboard/ResponsiveGrid';
 import { NavigationItem, Module, DashboardStats } from '@/types/dashboard';
 
 const AdminNavigation: NavigationItem[] = [
@@ -343,7 +345,7 @@ export const AdminDashboard: React.FC = () => {
       >
         <div className="flex items-center justify-center min-h-64">
           <div className="text-center">
-            <i className="fas fa-spinner fa-spin text-4xl text-gray-400 mb-4"></i>
+            <Loader2 className="w-10 h-10 text-gray-400 mb-4 animate-spin inline-block" />
             <p className="text-gray-500">Chargement des données...</p>
           </div>
         </div>
@@ -362,8 +364,8 @@ export const AdminDashboard: React.FC = () => {
       <div className="bg-gradient-to-r from-gray-50 to-blue-50 border border-gray-200 rounded-lg p-6 mb-8">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900">État du système</h3>
-          <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(systemHealth.status)}`}>
-            <i className="fas fa-circle mr-2"></i>
+          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(systemHealth.status)}`}>
+            <Circle className="w-3 h-3 mr-2" />
             {getStatusLabel(systemHealth.status)}
           </span>
         </div>
@@ -440,8 +442,8 @@ export const AdminDashboard: React.FC = () => {
       {/* Alertes administratives */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8 transition-all duration-300 ease-in-out">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            <i className="fas fa-exclamation-triangle text-red-500 mr-2"></i>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 inline-flex items-center">
+            <AlertTriangle className="w-5 h-5 text-red-500 mr-2" />
             Alertes critiques
           </h3>
           <div className="space-y-3">
@@ -457,8 +459,8 @@ export const AdminDashboard: React.FC = () => {
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            <i className="fas fa-tasks text-blue-500 mr-2"></i>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 inline-flex items-center">
+            <ListChecks className="w-5 h-5 text-blue-500 mr-2" />
             Actions en attente
           </h3>
           <div className="space-y-3">
@@ -480,8 +482,8 @@ export const AdminDashboard: React.FC = () => {
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            <i className="fas fa-chart-line text-green-500 mr-2"></i>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 inline-flex items-center">
+            <BarChart2 className="w-5 h-5 text-green-500 mr-2" />
             Métriques de performance
           </h3>
           <div className="space-y-3">
@@ -508,25 +510,25 @@ export const AdminDashboard: React.FC = () => {
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-4 sm:gap-6 transition-all duration-300 ease-in-out">
           <button className="p-4 text-left bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
-            <i className="fas fa-user-plus text-blue-600 text-2xl mb-2"></i>
+            <UserPlus className="w-6 h-6 text-blue-600 mb-2" />
             <p className="font-medium text-blue-900">Créer un utilisateur</p>
             <p className="text-sm text-blue-600">Ajouter un nouvel utilisateur</p>
           </button>
           
           <button className="p-4 text-left bg-green-50 hover:bg-green-100 rounded-lg transition-colors">
-            <i className="fas fa-building text-green-600 text-2xl mb-2"></i>
+            <BuildingIcon className="w-6 h-6 text-green-600 mb-2" />
             <p className="font-medium text-green-900">Nouvelle organisation</p>
             <p className="text-sm text-green-600">Enregistrer une organisation</p>
           </button>
           
           <button className="p-4 text-left bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors">
-            <i className="fas fa-database text-purple-600 text-2xl mb-2"></i>
+            <DatabaseIcon className="w-6 h-6 text-purple-600 mb-2" />
             <p className="font-medium text-purple-900">Sauvegarde manuelle</p>
             <p className="text-sm text-purple-600">Lancer une sauvegarde</p>
           </button>
           
           <button className="p-4 text-left bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors">
-            <i className="fas fa-chart-bar text-orange-600 text-2xl mb-2"></i>
+            <BarChart2 className="w-6 h-6 text-orange-600 mb-2" />
             <p className="font-medium text-orange-900">Rapport global</p>
             <p className="text-sm text-orange-600">Générer un rapport</p>
           </button>
@@ -538,7 +540,7 @@ export const AdminDashboard: React.FC = () => {
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
           Modules d'administration
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <ResponsiveGrid variant="modules" gap="large">
           {AdminModules.map((module) => (
             <ModuleCard
               key={module.id}
@@ -546,7 +548,7 @@ export const AdminDashboard: React.FC = () => {
               onClick={() => handleModuleClick(module.id)}
             />
           ))}
-        </div>
+        </ResponsiveGrid>
       </div>
     </DashboardLayout>
   );

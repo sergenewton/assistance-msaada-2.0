@@ -636,6 +636,171 @@ if (preg_match('#^/api/v1/reports-db/(?P<tracking>VBG-\d{4}-\d{4})$#', $uri, $m)
     exit;
 }
 
+// -------------------------------
+// Reports (Operator triage lists)
+// -------------------------------
+// GET /api/v1/reports/unprocessed
+if ($uri === '/api/v1/reports/unprocessed' && $method === 'GET') {
+    // Require auth header (mock validation)
+    $headers = getallheaders();
+    $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? '';
+    if (!str_starts_with($authHeader, 'Bearer ')) {
+        http_response_code(401);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Token requis'
+        ]);
+        exit;
+    }
+
+    // Pagination inputs
+    $limit = isset($_GET['limit']) ? max(1, (int) $_GET['limit']) : 25;
+    $page = isset($_GET['page']) ? max(1, (int) $_GET['page']) : 1;
+
+    $items = [];
+
+    // Try DB first
+    $pdo = db_pdo();
+    if ($pdo && db_has_reports_table($pdo)) {
+        try {
+            // Minimal safe columns (status/assigned_aps_id may not exist depending on migrations)
+            $sql = "SELECT report_number, violence_type, urgency_level, created_at, updated_at FROM reports ORDER BY created_at DESC";
+            $stmt = $pdo->query($sql);
+            $rows = $stmt->fetchAll();
+            foreach ($rows as $r) {
+                $items[] = [
+                    'report_number' => $r['report_number'] ?? null,
+                    'violence_type' => $r['violence_type'] ?? null,
+                    'urgency_level' => $r['urgency_level'] ?? 'low',
+                    'status' => 'new',
+                    'created_at' => $r['created_at'] ?? date('c'),
+                    'updated_at' => $r['updated_at'] ?? ($r['created_at'] ?? date('c')),
+                ];
+            }
+        } catch (Throwable $e) {
+            // Fallback to file store
+            $pdo = null;
+        }
+    }
+
+    if (!$pdo) {
+        // File-backed store
+        $all = json_decode(file_get_contents($STORE_FILE), true) ?: [];
+        // Newest first
+        usort($all, fn($a, $b) => strcmp($b['created_at'] ?? '', $a['created_at'] ?? ''));
+        foreach ($all as $r) {
+            $p = $r['payload'] ?? [];
+            $items[] = [
+                'report_number' => $r['report_number'] ?? null,
+                'violence_type' => $p['violence_type'] ?? ($p['type'] ?? 'other'),
+                'urgency_level' => $p['urgency_level'] ?? 'low',
+                'status' => 'new',
+                'created_at' => $r['created_at'] ?? date('c'),
+                'updated_at' => $r['created_at'] ?? date('c'),
+            ];
+        }
+    }
+
+    // Pagination slice
+    $total = count($items);
+    $start = ($page - 1) * $limit;
+    $paged = array_slice($items, $start, $limit);
+
+    echo json_encode([
+        'success' => true,
+        'message' => 'Unprocessed reports',
+        'data' => [
+            'items' => $paged,
+            'pagination' => [
+                'total' => $total,
+                'per_page' => $limit,
+                'current_page' => $page,
+                'last_page' => max(1, (int) ceil($total / $limit)),
+            ],
+        ],
+    ]);
+    exit;
+}
+
+// GET /api/v1/reports/unprocessed-urgent
+if ($uri === '/api/v1/reports/unprocessed-urgent' && $method === 'GET') {
+    // Require auth header (mock validation)
+    $headers = getallheaders();
+    $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? '';
+    if (!str_starts_with($authHeader, 'Bearer ')) {
+        http_response_code(401);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Token requis'
+        ]);
+        exit;
+    }
+
+    $limit = isset($_GET['limit']) ? max(1, (int) $_GET['limit']) : 25;
+    $page = isset($_GET['page']) ? max(1, (int) $_GET['page']) : 1;
+
+    $items = [];
+    $pdo = db_pdo();
+    $urgentSet = ['high' => true, 'critical' => true];
+
+    if ($pdo && db_has_reports_table($pdo)) {
+        try {
+            $sql = "SELECT report_number, violence_type, urgency_level, created_at, updated_at FROM reports WHERE urgency_level IN ('high','critical') ORDER BY created_at DESC";
+            $stmt = $pdo->query($sql);
+            $rows = $stmt->fetchAll();
+            foreach ($rows as $r) {
+                $items[] = [
+                    'report_number' => $r['report_number'] ?? null,
+                    'violence_type' => $r['violence_type'] ?? null,
+                    'urgency_level' => $r['urgency_level'] ?? 'low',
+                    'status' => 'new',
+                    'created_at' => $r['created_at'] ?? date('c'),
+                    'updated_at' => $r['updated_at'] ?? ($r['created_at'] ?? date('c')),
+                ];
+            }
+        } catch (Throwable $e) {
+            $pdo = null;
+        }
+    }
+
+    if (!$pdo) {
+        $all = json_decode(file_get_contents($STORE_FILE), true) ?: [];
+        usort($all, fn($a, $b) => strcmp($b['created_at'] ?? '', $a['created_at'] ?? ''));
+        foreach ($all as $r) {
+            $p = $r['payload'] ?? [];
+            $urg = $p['urgency_level'] ?? 'low';
+            if (!isset($urgentSet[$urg])) continue;
+            $items[] = [
+                'report_number' => $r['report_number'] ?? null,
+                'violence_type' => $p['violence_type'] ?? ($p['type'] ?? 'other'),
+                'urgency_level' => $urg,
+                'status' => 'new',
+                'created_at' => $r['created_at'] ?? date('c'),
+                'updated_at' => $r['created_at'] ?? date('c'),
+            ];
+        }
+    }
+
+    $total = count($items);
+    $start = ($page - 1) * $limit;
+    $paged = array_slice($items, $start, $limit);
+
+    echo json_encode([
+        'success' => true,
+        'message' => 'Unprocessed urgent reports',
+        'data' => [
+            'items' => $paged,
+            'pagination' => [
+                'total' => $total,
+                'per_page' => $limit,
+                'current_page' => $page,
+                'last_page' => max(1, (int) ceil($total / $limit)),
+            ],
+        ],
+    ]);
+    exit;
+}
+
 // Route par défaut
 http_response_code(404);
 echo json_encode([
@@ -649,6 +814,8 @@ echo json_encode([
         'GET /api/v1/auth/verify',
         'POST /api/v1/auth/logout',
         'GET /api/v1/auth/roles',
-        'GET /api/v1/auth/users'
+        'GET /api/v1/auth/users',
+        'GET /api/v1/reports/unprocessed',
+        'GET /api/v1/reports/unprocessed-urgent'
     ]
 ]);

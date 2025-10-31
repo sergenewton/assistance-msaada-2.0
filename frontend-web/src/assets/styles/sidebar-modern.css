@@ -1,0 +1,126 @@
+/* Styles modernes pour la sidebar */
+
+/* Scrollbar personnalisée */
+.sidebar-nav::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(75, 85, 99, 0.5);
+  border-radius: 3px;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background: rgba(75, 85, 99, 0.8);
+}
+
+/* Animation des tooltips */
+.sidebar-tooltip {
+  @apply absolute left-full ml-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg shadow-lg;
+  @apply opacity-0 invisible group-hover:opacity-100 group-hover:visible;
+  @apply transition-all duration-200 whitespace-nowrap z-50;
+  @apply border border-gray-700;
+}
+
+/* Effet de glow pour les éléments actifs */
+.nav-item-active {
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.15);
+}
+
+/* Animation des icônes */
+.sidebar-icon {
+  @apply transition-all duration-200;
+}
+
+.sidebar-icon:hover {
+  @apply scale-110;
+}
+
+/* Badge de notification */
+.notification-badge {
+  @apply bg-emerald-500 text-white;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+}
+
+/* Effet glassmorphism pour la sidebar */
+.sidebar-glass {
+  backdrop-filter: blur(16px);
+  background: rgba(17, 24, 39, 0.95);
+}
+
+/* Animation de collapse/expand */
+.sidebar-transition {
+  @apply transition-all duration-300 ease-in-out;
+}
+
+/* Hover effects améliorés */
+.sidebar-item {
+  @apply relative overflow-hidden;
+}
+
+.sidebar-item::before {
+  content: '';
+  @apply absolute inset-0 bg-gradient-to-r from-emerald-500/10 to-transparent;
+  @apply opacity-0 transition-opacity duration-200;
+}
+
+.sidebar-item:hover::before {
+  @apply opacity-100;
+}
+
+/* Groupes de navigation */
+.nav-section-header {
+  @apply text-gray-500 text-xs font-semibold uppercase tracking-wider;
+  @apply px-6 py-2 mb-2;
+}
+
+/* Mode sombre toggle */
+.dark-mode-toggle {
+  @apply relative inline-flex h-4 w-8 items-center rounded-full;
+  @apply bg-gray-700 transition-colors duration-200;
+}
+
+.dark-mode-toggle.active {
+  @apply bg-emerald-500;
+}
+
+.dark-mode-toggle-thumb {
+  @apply inline-block h-3 w-3 transform rounded-full;
+  @apply bg-white transition-transform duration-200;
+}
+
+.dark-mode-toggle.active .dark-mode-toggle-thumb {
+  @apply translate-x-4;
+}
+
+/* Animations d'entrée */
+@keyframes slideInFromLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.sidebar-item-animate {
+  animation: slideInFromLeft 0.3s ease-out;
+}
+
+/* États de focus améliorés */
+.sidebar-item:focus-visible {
+  @apply outline-none ring-2 ring-emerald-500 ring-opacity-50;
+}
+
+/* Responsive amélioré */
+@media (max-width: 1024px) {
+  .sidebar-glass {
+    background: rgba(17, 24, 39, 0.98);
+  }
+}

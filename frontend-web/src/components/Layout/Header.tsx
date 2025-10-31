@@ -1,4 +1,5 @@
 import React from 'react';
+import { Menu, Bell, ChevronDown, User as UserIcon, Settings, LogOut } from 'lucide-react';
 import { useAuth } from '@/store/authStore';
 
 interface HeaderProps {
@@ -22,7 +23,7 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className={`bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 ${className}`}>
+    <header className={`bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 flex-shrink-0 ${className}`}>
       <div className="px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Left side */}
@@ -32,16 +33,16 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={onToggleSidebar}
               className="lg:hidden p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-green-500"
             >
-              <i className="fas fa-bars text-lg"></i>
+              <Menu className="w-5 h-5" />
             </button>
 
             {/* Title */}
             <div className="ml-4 lg:ml-0">
-              <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
+              <h1 className="text-xl font-semibold text-success-600 dark:text-success-500 leading-tight mb-0">
                 {title}
               </h1>
               {subtitle && (
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
                   {subtitle}
                 </p>
               )}
@@ -52,7 +53,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center space-x-4">
             {/* Notifications */}
             <button className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full focus:outline-none focus:ring-2 focus:ring-green-500">
-              <i className="fas fa-bell text-lg"></i>
+              <Bell className="w-5 h-5" />
               <span className="absolute top-0 right-0 block h-2 w-2 bg-red-500 rounded-full"></span>
             </button>
 
@@ -62,7 +63,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center text-white font-medium">
                   {user?.email?.charAt(0).toUpperCase() || 'U'}
                 </div>
-                <i className="fas fa-chevron-down ml-2 text-gray-600"></i>
+                <ChevronDown className="w-4 h-4 ml-2 text-gray-600" />
               </button>
 
               {/* Dropdown menu */}
@@ -79,26 +80,26 @@ export const Header: React.FC<HeaderProps> = ({
                   
                   <a
                     href="/profile"
-                    className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                   >
-                    <i className="fas fa-user mr-2"></i>
+                    <UserIcon className="w-4 h-4 mr-2" />
                     Mon profil
                   </a>
                   
                   <a
                     href="/settings"
-                    className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                   >
-                    <i className="fas fa-cog mr-2"></i>
+                    <Settings className="w-4 h-4 mr-2" />
                     Paramètres
                   </a>
                   
                   <div className="border-t border-gray-200 dark:border-gray-700">
                     <button
                       onClick={handleLogout}
-                      className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      className="flex items-center w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700"
                     >
-                      <i className="fas fa-sign-out-alt mr-2"></i>
+                      <LogOut className="w-4 h-4 mr-2" />
                       Se déconnecter
                     </button>
                   </div>

@@ -84,3 +84,20 @@ php artisan serve
 ```bash
 php artisan test
 ```
+
+## Développement local (serveur mock)
+
+Le script `quick-start-local.sh` démarre un serveur PHP intégré sur le port 8000 en utilisant un routeur léger `public/api-test.php`. Ce routeur mock propose des endpoints compatibles pour l'auth et les signalements sans passer par le Kernel Laravel, pratique pour les itérations rapides front-end.
+
+Endpoints mock importants:
+- `GET /api/health`
+- `POST /api/v1/auth/login`
+- `GET /api/v1/auth/me`
+- `POST /api/v1/reports` (soumission publique)
+- `GET /api/v1/reports/{tracking}` (consultation publique)
+- `GET /api/v1/reports/unprocessed` (opérateur – non traités)
+- `GET /api/v1/reports/unprocessed-urgent` (opérateur – non traités urgents)
+
+Remarques:
+- Ces endpoints mock lisent/écrivent dans un petit stockage fichier, avec support MySQL optionnel si la base est démarrée.
+- En mode local via ce routeur, les routes Laravel ajoutées dans `routes/api.php` ne sont pas utilisées. Pour tester les vraies routes Laravel, lancez l'API avec `php artisan serve` (ou via le conteneur) et utilisez `public/index.php` comme point d'entrée.

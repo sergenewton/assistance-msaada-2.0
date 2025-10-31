@@ -1,4 +1,5 @@
 import React from 'react';
+import { ArrowRight, FolderOpen, Calendar, Clock, User as UserIcon } from 'lucide-react';
 import { CaseOverview } from '@/types/dashboard';
 
 interface RecentCasesProps {
@@ -68,17 +69,17 @@ export const RecentCases: React.FC<RecentCasesProps> = ({
         {onViewAll && (
           <button
             onClick={onViewAll}
-            className="text-green-600 hover:text-green-700 text-sm font-medium"
+            className="inline-flex items-center text-green-600 hover:text-green-700 text-sm font-medium"
           >
             Voir tout
-            <i className="fas fa-arrow-right ml-1"></i>
+            <ArrowRight className="w-4 h-4 ml-1" />
           </button>
         )}
       </div>
 
       {displayedCases.length === 0 ? (
         <div className="text-center py-8">
-          <i className="fas fa-folder-open text-gray-400 text-3xl mb-4"></i>
+          <FolderOpen className="w-10 h-10 text-gray-400 mb-4 inline-block" />
           <p className="text-gray-500 dark:text-gray-400">Aucun cas à afficher</p>
         </div>
       ) : (
@@ -111,19 +112,19 @@ export const RecentCases: React.FC<RecentCasesProps> = ({
 
               <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
                 <div className="flex items-center space-x-4">
-                  <span>
-                    <i className="fas fa-calendar mr-1"></i>
+                  <span className="inline-flex items-center">
+                    <Calendar className="w-3.5 h-3.5 mr-1" />
                     Créé: {formatDate(caseItem.createdAt)}
                   </span>
-                  <span>
-                    <i className="fas fa-clock mr-1"></i>
+                  <span className="inline-flex items-center">
+                    <Clock className="w-3.5 h-3.5 mr-1" />
                     Maj: {formatDate(caseItem.lastUpdate)}
                   </span>
                 </div>
 
                 {(caseItem.assignedTo || caseItem.organization) && (
                   <div className="flex items-center">
-                    <i className="fas fa-user mr-1"></i>
+                    <UserIcon className="w-3.5 h-3.5 mr-1" />
                     <span>{caseItem.assignedTo || caseItem.organization}</span>
                   </div>
                 )}

@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { Loader2, CirclePlus, ChevronRight, Share2, FileText, Calendar, ClipboardCheck } from 'lucide-react';
 import { DashboardLayout } from '@/components/Layout/DashboardLayout';
 import { StatsCard } from '@/components/Dashboard/StatsCard';
 import { ModuleCard } from '@/components/Dashboard/ModuleCard';
 import { RecentCases } from '@/components/Dashboard/RecentCases';
+import { ResponsiveGrid } from '@/components/Dashboard/ResponsiveGrid';
 import { NavigationItem, Module, DashboardStats, CaseOverview } from '@/types/dashboard';
 
 const APSNavigation: NavigationItem[] = [
@@ -225,7 +227,7 @@ export const APSDashboard: React.FC = () => {
       >
         <div className="flex items-center justify-center min-h-64">
           <div className="text-center">
-            <i className="fas fa-spinner fa-spin text-4xl text-gray-400 mb-4"></i>
+            <Loader2 className="w-10 h-10 text-gray-400 mb-4 animate-spin inline-block" />
             <p className="text-gray-500">Chargement des données...</p>
           </div>
         </div>
@@ -289,35 +291,35 @@ export const APSDashboard: React.FC = () => {
           <div className="space-y-4">
             <button className="w-full flex items-center justify-between p-4 text-left bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
               <div className="flex items-center">
-                <i className="fas fa-plus-circle text-blue-600 text-xl mr-3"></i>
+                <CirclePlus className="w-5 h-5 text-blue-600 mr-3" />
                 <div>
                   <p className="font-medium text-blue-900">Nouvelle séance</p>
                   <p className="text-sm text-blue-600">Documenter une séance d'accompagnement</p>
                 </div>
               </div>
-              <i className="fas fa-chevron-right text-blue-600"></i>
+              <ChevronRight className="w-4 h-4 text-blue-600" />
             </button>
 
             <button className="w-full flex items-center justify-between p-4 text-left bg-green-50 hover:bg-green-100 rounded-lg transition-colors">
               <div className="flex items-center">
-                <i className="fas fa-share-alt text-green-600 text-xl mr-3"></i>
+                <Share2 className="w-5 h-5 text-green-600 mr-3" />
                 <div>
                   <p className="font-medium text-green-900">Demander un référencement</p>
                   <p className="text-sm text-green-600">Solliciter une prise en charge complémentaire</p>
                 </div>
               </div>
-              <i className="fas fa-chevron-right text-green-600"></i>
+              <ChevronRight className="w-4 h-4 text-green-600" />
             </button>
 
             <button className="w-full flex items-center justify-between p-4 text-left bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors">
               <div className="flex items-center">
-                <i className="fas fa-file-alt text-purple-600 text-xl mr-3"></i>
+                <FileText className="w-5 h-5 text-purple-600 mr-3" />
                 <div>
                   <p className="font-medium text-purple-900">Générer un rapport</p>
                   <p className="text-sm text-purple-600">Créer un rapport d'étape</p>
                 </div>
               </div>
-              <i className="fas fa-chevron-right text-purple-600"></i>
+              <ChevronRight className="w-4 h-4 text-purple-600" />
             </button>
           </div>
         </div>
@@ -328,7 +330,7 @@ export const APSDashboard: React.FC = () => {
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
           Modules disponibles
         </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-4 sm:gap-6 transition-all duration-300 ease-in-out">
+        <ResponsiveGrid variant="modules" gap="medium">
           {APSModules.map((module) => (
             <ModuleCard
               key={module.id}
@@ -336,7 +338,7 @@ export const APSDashboard: React.FC = () => {
               onClick={() => handleModuleClick(module.id)}
             />
           ))}
-        </div>
+        </ResponsiveGrid>
       </div>
 
       {/* Rappels et notifications */}
@@ -346,14 +348,14 @@ export const APSDashboard: React.FC = () => {
         </h3>
         <div className="space-y-3">
           <div className="flex items-center p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <i className="fas fa-calendar-alt text-yellow-600 mr-3"></i>
+            <Calendar className="w-5 h-5 text-yellow-600 mr-3" />
             <div>
               <p className="font-medium text-yellow-900">Séance programmée</p>
               <p className="text-sm text-yellow-700">Rendez-vous avec Mme X à 14h00</p>
             </div>
           </div>
           <div className="flex items-center p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <i className="fas fa-clipboard-check text-blue-600 mr-3"></i>
+            <ClipboardCheck className="w-5 h-5 text-blue-600 mr-3" />
             <div>
               <p className="font-medium text-blue-900">Rapport en attente</p>
               <p className="text-sm text-blue-700">Rapport d'étape pour le cas #MSA2024001</p>

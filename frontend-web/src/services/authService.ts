@@ -135,11 +135,6 @@ class AuthService {
    * Connexion utilisateur
    */
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    // Mode test temporaire pour valider les redirections des dashboards
-    if (import.meta.env.DEV && this.isTestUser(credentials.identifier, credentials.password)) {
-      return this.handleTestLogin(credentials.identifier);
-    }
-
     try {
       const response = await this.api.post('/auth/login', {
         ...credentials,
@@ -150,94 +145,6 @@ class AuthService {
     } catch (error) {
       throw this.handleError(error);
     }
-  }
-
-  /**
-   * Vérifier si c'est un utilisateur de test (mode développement seulement)
-   */
-  private isTestUser(identifier: string, password: string): boolean {
-    const testUsers = [
-      'aps@msaada.com',
-      'operator@msaada.com', 
-      'org@msaada.com',
-      'admin@msaada.com',
-      'supervisor@msaada.com'
-    ];
-    
-    return testUsers.includes(identifier) && password === 'password123';
-  }
-
-  /**
-   * Gérer la connexion d'un utilisateur de test (mode développement seulement)
-   */
-  private async handleTestLogin(email: string): Promise<AuthResponse> {
-    const testUserData = {
-      'aps@msaada.com': {
-        id: 'test-aps-id',
-        email: 'aps@msaada.com',
-        role: 'aps',
-        role_display_name: 'Agent Psychosocial (APS)',
-        permissions: ['view_dashboard', 'view_reports', 'create_reports', 'edit_reports', 'manage_referrals', 'send_messages'],
-        two_factor_enabled: false,
-        created_at: new Date().toISOString()
-      },
-      'operator@msaada.com': {
-        id: 'test-operator-id',
-        email: 'operator@msaada.com',
-        role: 'operateur',
-        role_display_name: 'Opérateur Centre d\'Écoute',
-        permissions: ['view_dashboard', 'view_reports', 'create_reports', 'edit_reports'],
-        two_factor_enabled: false,
-        created_at: new Date().toISOString()
-      },
-      'org@msaada.com': {
-        id: 'test-org-id',
-        email: 'org@msaada.com',
-        role: 'organisation',
-        role_display_name: 'Organisation Partenaire',
-        permissions: ['view_dashboard', 'view_reports', 'manage_referrals', 'send_messages'],
-        two_factor_enabled: false,
-        created_at: new Date().toISOString()
-      },
-      'admin@msaada.com': {
-        id: 'test-admin-id',
-        email: 'admin@msaada.com',
-        role: 'admin',
-        role_display_name: 'Administrateur Système',
-        permissions: ['view_dashboard', 'manage_users', 'view_reports', 'create_reports', 'edit_reports', 'assign_cases', 'manage_organizations', 'view_analytics', 'manage_content', 'export_data', 'system_config', 'manage_referrals', 'view_audit_logs', 'send_messages', 'view_sensitive_data'],
-        two_factor_enabled: false,
-        created_at: new Date().toISOString()
-      },
-      'supervisor@msaada.com': {
-        id: 'test-supervisor-id',
-        email: 'supervisor@msaada.com',
-        role: 'superviseur',
-        role_display_name: 'Superviseur / Coordinateur',
-        permissions: ['view_dashboard', 'view_reports', 'assign_cases', 'view_analytics', 'manage_referrals', 'view_audit_logs', 'send_messages', 'view_sensitive_data'],
-        two_factor_enabled: false,
-        created_at: new Date().toISOString()
-      }
-    };
-
-    const userData = testUserData[email as keyof typeof testUserData];
-    
-    if (!userData) {
-      throw new Error('Utilisateur de test non trouvé');
-    }
-
-    // Simuler une réponse d'API réussie
-    return {
-      success: true,
-      message: 'Connexion réussie (mode test)',
-      data: {
-        user: userData,
-        token: {
-          access_token: 'test-token-' + Date.now(),
-          token_type: 'Bearer',
-          expires_at: new Date(Date.now() + 3600000).toISOString(), // 1 heure
-        }
-      }
-    };
   }
 
   /**
@@ -455,6 +362,15 @@ class AuthService {
    */
   setCurrentUser(user: User): void {
     localStorage.setItem('auth_user', JSON.stringify(user));
+  }
+
+  /**
+   * Exposer le client Axios configuré (mêmes en-têtes, interceptors, baseURL)
+   * À utiliser par les autres services (reports, referrals, etc.) pour garantir
+   * la même logique d'authentification et de gestion d'erreurs.
+   */
+  getApi(): AxiosInstance {
+    return this.api;
   }
 }
 

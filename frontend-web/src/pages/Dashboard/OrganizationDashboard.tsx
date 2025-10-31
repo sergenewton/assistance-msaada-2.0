@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { Loader2, ChevronRight, CheckCircle, Upload, Pencil, Share2, Hourglass, Info } from 'lucide-react';
 import { DashboardLayout } from '@/components/Layout/DashboardLayout';
 import { StatsCard } from '@/components/Dashboard/StatsCard';
 import { ModuleCard } from '@/components/Dashboard/ModuleCard';
 import { RecentCases } from '@/components/Dashboard/RecentCases';
+import { ResponsiveGrid } from '@/components/Dashboard/ResponsiveGrid';
 import { NavigationItem, Module, DashboardStats, CaseOverview } from '@/types/dashboard';
 
 const OrganizationNavigation: NavigationItem[] = [
@@ -247,7 +249,7 @@ export const OrganizationDashboard: React.FC = () => {
       >
         <div className="flex items-center justify-center min-h-64">
           <div className="text-center">
-            <i className="fas fa-spinner fa-spin text-4xl text-gray-400 mb-4"></i>
+            <Loader2 className="w-10 h-10 text-gray-400 mb-4 animate-spin inline-block" />
             <p className="text-gray-500">Chargement des données...</p>
           </div>
         </div>
@@ -347,46 +349,46 @@ export const OrganizationDashboard: React.FC = () => {
           <div className="space-y-4">
             <button className="w-full flex items-center justify-between p-4 text-left bg-green-50 hover:bg-green-100 rounded-lg transition-colors">
               <div className="flex items-center">
-                <i className="fas fa-check-circle text-green-600 text-xl mr-3"></i>
+                <CheckCircle className="w-5 h-5 text-green-600 mr-3" />
                 <div>
                   <p className="font-medium text-green-900">Accepter un référencement</p>
                   <p className="text-sm text-green-600">Confirmer la prise en charge</p>
                 </div>
               </div>
-              <i className="fas fa-chevron-right text-green-600"></i>
+              <ChevronRight className="w-4 h-4 text-green-600" />
             </button>
 
             <button className="w-full flex items-center justify-between p-4 text-left bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
               <div className="flex items-center">
-                <i className="fas fa-upload text-blue-600 text-xl mr-3"></i>
+                <Upload className="w-5 h-5 text-blue-600 mr-3" />
                 <div>
                   <p className="font-medium text-blue-900">Télécharger un document</p>
                   <p className="text-sm text-blue-600">Certificat, rapport, PV...</p>
                 </div>
               </div>
-              <i className="fas fa-chevron-right text-blue-600"></i>
+              <ChevronRight className="w-4 h-4 text-blue-600" />
             </button>
 
             <button className="w-full flex items-center justify-between p-4 text-left bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors">
               <div className="flex items-center">
-                <i className="fas fa-edit text-purple-600 text-xl mr-3"></i>
+                <Pencil className="w-5 h-5 text-purple-600 mr-3" />
                 <div>
                   <p className="font-medium text-purple-900">Mettre à jour un cas</p>
                   <p className="text-sm text-purple-600">Statut, progression, notes...</p>
                 </div>
               </div>
-              <i className="fas fa-chevron-right text-purple-600"></i>
+              <ChevronRight className="w-4 h-4 text-purple-600" />
             </button>
 
             <button className="w-full flex items-center justify-between p-4 text-left bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors">
               <div className="flex items-center">
-                <i className="fas fa-share-alt text-orange-600 text-xl mr-3"></i>
+                <Share2 className="w-5 h-5 text-orange-600 mr-3" />
                 <div>
                   <p className="font-medium text-orange-900">Référencement croisé</p>
                   <p className="text-sm text-orange-600">Proposer à une autre organisation</p>
                 </div>
               </div>
-              <i className="fas fa-chevron-right text-orange-600"></i>
+              <ChevronRight className="w-4 h-4 text-orange-600" />
             </button>
           </div>
         </div>
@@ -397,7 +399,7 @@ export const OrganizationDashboard: React.FC = () => {
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-8">
           <div className="flex items-start justify-between">
             <div className="flex items-start">
-              <i className="fas fa-hourglass-half text-yellow-600 text-xl mr-3 mt-1"></i>
+              <Hourglass className="w-5 h-5 text-yellow-600 mr-3 mt-1" />
               <div>
                 <h3 className="font-semibold text-yellow-900 mb-2">
                   {stats.pendingActions} référencements en attente de votre réponse
@@ -442,7 +444,7 @@ export const OrganizationDashboard: React.FC = () => {
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
           Modules disponibles
         </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-4 sm:gap-6 transition-all duration-300 ease-in-out">
+        <ResponsiveGrid variant="modules" gap="medium">
           {OrganizationModules.map((module) => (
             <ModuleCard
               key={module.id}
@@ -450,7 +452,7 @@ export const OrganizationDashboard: React.FC = () => {
               onClick={() => handleModuleClick(module.id)}
             />
           ))}
-        </div>
+        </ResponsiveGrid>
       </div>
 
       {/* Performances et métriques */}
@@ -496,14 +498,14 @@ export const OrganizationDashboard: React.FC = () => {
           </h3>
           <div className="space-y-3">
             <div className="flex items-center p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <i className="fas fa-info-circle text-blue-600 mr-3"></i>
+              <Info className="w-5 h-5 text-blue-600 mr-3" />
               <div>
                 <p className="font-medium text-blue-900">Mise à jour requise</p>
                 <p className="text-sm text-blue-700">Cas #MSA2024018 - Statut à mettre à jour</p>
               </div>
             </div>
             <div className="flex items-center p-3 bg-green-50 border border-green-200 rounded-lg">
-              <i className="fas fa-check-circle text-green-600 mr-3"></i>
+              <CheckCircle className="w-5 h-5 text-green-600 mr-3" />
               <div>
                 <p className="font-medium text-green-900">Document reçu</p>
                 <p className="text-sm text-green-700">Certificat médical uploadé avec succès</p>

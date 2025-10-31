@@ -1,4 +1,34 @@
 import React from 'react';
+import {
+  type LucideIcon,
+  ArrowUpRight,
+  ArrowDownRight,
+  Users as UsersIcon,
+  User as UserIcon,
+  Inbox,
+  FolderOpen,
+  Eye,
+  Calendar,
+  Activity,
+  BarChart2,
+  Folder,
+  Circle,
+  Clock,
+  CheckCircle,
+  AlertTriangle,
+  Database,
+  FileText,
+  Building,
+  Shield,
+  GraduationCap,
+  Share2,
+  Upload,
+  Headphones,
+  Map,
+  Star,
+  ListChecks,
+  Loader2,
+} from 'lucide-react';
 
 interface StatsCardProps {
   title: string;
@@ -60,6 +90,34 @@ export const StatsCard: React.FC<StatsCardProps> = ({
   onClick
 }) => {
   const colors = colorClasses[color];
+  const iconMap: Record<string, LucideIcon> = {
+    'fas fa-users': UsersIcon,
+    'fas fa-user': UserIcon,
+    'fas fa-inbox': Inbox,
+    'fas fa-folder-open': FolderOpen,
+    'fas fa-eye': Eye,
+    'fas fa-calendar': Calendar,
+    'fas fa-activity': Activity,
+    'fas fa-chart-line': BarChart2,
+    'fas fa-folder': Folder,
+    'fas fa-circle': Circle,
+    'fas fa-clock': Clock,
+    'fas fa-check-circle': CheckCircle,
+    'fas fa-exclamation-triangle': AlertTriangle,
+    'fas fa-database': Database,
+    'fas fa-file-alt': FileText,
+    'fas fa-building': Building,
+    'fas fa-shield-alt': Shield,
+    'fas fa-graduation-cap': GraduationCap,
+    'fas fa-share-alt': Share2,
+    'fas fa-upload': Upload,
+    'fas fa-headset': Headphones,
+    'fas fa-map': Map,
+    'fas fa-star': Star,
+    'fas fa-tasks': ListChecks,
+    'fas fa-spinner': Loader2,
+  };
+  const ResolvedIcon: LucideIcon = iconMap[icon] || Circle;
   
   return (
     <div 
@@ -85,7 +143,11 @@ export const StatsCard: React.FC<StatsCardProps> = ({
           </p>
           {trend && (
             <div className="flex items-center mt-2">
-              <i className={`fas ${trend.isPositive ? 'fa-arrow-up text-green-500' : 'fa-arrow-down text-red-500'} text-sm mr-1`}></i>
+              {trend.isPositive ? (
+                <ArrowUpRight className="w-4 h-4 text-green-500 mr-1" />
+              ) : (
+                <ArrowDownRight className="w-4 h-4 text-red-500 mr-1" />
+              )}
               <span className={`text-sm font-medium ${trend.isPositive ? 'text-green-600' : 'text-red-600'}`}>
                 {Math.abs(trend.value)}%
               </span>
@@ -95,7 +157,7 @@ export const StatsCard: React.FC<StatsCardProps> = ({
         </div>
         
         <div className={`w-10 h-10 sm:w-12 sm:h-12 ${colors.bgLight} rounded-lg flex items-center justify-center transition-all duration-200 group-hover:scale-110`}>
-          <i className={`${icon} text-lg sm:text-xl ${colors.text} transition-colors duration-200`} style={{strokeWidth: '1.5px'}}></i>
+          <ResolvedIcon className={`w-5 h-5 sm:w-6 sm:h-6 ${colors.text}`} />
         </div>
       </div>
     </div>

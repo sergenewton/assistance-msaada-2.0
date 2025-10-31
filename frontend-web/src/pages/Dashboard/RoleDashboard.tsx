@@ -1,4 +1,5 @@
 import React from 'react';
+import { Lock, LogIn, Shield, AlertTriangle, LogOut } from 'lucide-react';
 import { useAuth } from '@/store/authStore';
 import { APSDashboard } from './APSDashboard';
 import { OperatorDashboard } from './OperatorDashboard';
@@ -30,14 +31,14 @@ export const RoleDashboard: React.FC = () => {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <i className="fas fa-lock text-4xl text-gray-400 mb-4"></i>
+          <Lock className="w-10 h-10 text-gray-400 mb-4 inline-block" />
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Accès non autorisé</h2>
           <p className="text-gray-600 mb-4">Veuillez vous connecter pour accéder à votre tableau de bord.</p>
           <a 
             href="/login" 
             className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
           >
-            <i className="fas fa-sign-in-alt mr-2"></i>
+            <LogIn className="w-4 h-4 mr-2" />
             Se connecter
           </a>
         </div>
@@ -69,7 +70,7 @@ export const RoleDashboard: React.FC = () => {
       return (
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
           <div className="text-center">
-            <i className="fas fa-user-shield text-4xl text-green-600 mb-4"></i>
+            <Shield className="w-10 h-10 text-green-600 mb-4 inline-block" />
             <h2 className="text-xl font-semibold text-gray-900 mb-2">Espace Survivante</h2>
             <p className="text-gray-600 mb-4">Interface en cours de développement.</p>
             <p className="text-sm text-gray-500">Contactez le support pour plus d'informations.</p>
@@ -81,7 +82,7 @@ export const RoleDashboard: React.FC = () => {
       return (
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
           <div className="text-center">
-            <i className="fas fa-exclamation-triangle text-4xl text-yellow-500 mb-4"></i>
+            <AlertTriangle className="w-10 h-10 text-yellow-500 mb-4 inline-block" />
             <h2 className="text-xl font-semibold text-gray-900 mb-2">Rôle non reconnu</h2>
             <p className="text-gray-600 mb-4">
               Le rôle "{userRole}" n'est pas configuré dans le système.
@@ -93,7 +94,7 @@ export const RoleDashboard: React.FC = () => {
               onClick={() => window.location.href = '/logout'}
               className="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
             >
-              <i className="fas fa-sign-out-alt mr-2"></i>
+              <LogOut className="w-4 h-4 mr-2" />
               Se déconnecter
             </button>
           </div>

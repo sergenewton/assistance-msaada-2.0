@@ -36,8 +36,8 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   };
 
   return (
-    <div className={`min-h-screen bg-gray-50 dark:bg-gray-900 flex ${className}`}>
-      {/* Sidebar */}
+    <div className={`h-screen bg-gray-50 dark:bg-gray-900 flex overflow-hidden ${className}`}>
+      {/* Sidebar - Fixed */}
       <Sidebar
         isOpen={sidebarOpen}
         onClose={closeSidebar}
@@ -48,16 +48,16 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       />
 
       {/* Main content area */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Header */}
+      <div className="flex-1 flex flex-col min-w-0 h-full">
+        {/* Header - Fixed */}
         <Header
           onToggleSidebar={toggleSidebar}
           title={title}
           subtitle={subtitle}
         />
 
-        {/* Main content */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-auto">
+        {/* Main content - Scrollable */}
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto overflow-x-hidden">
           {children}
         </main>
       </div>

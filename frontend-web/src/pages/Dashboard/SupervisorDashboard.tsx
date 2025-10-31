@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { Loader2, ArrowUpRight, ArrowDownRight, Minus, UserCheck as UserCheckIcon, Headphones, Building as BuildingIcon, LineChart, Map } from 'lucide-react';
 import { DashboardLayout } from '@/components/Layout/DashboardLayout';
 import { StatsCard } from '@/components/Dashboard/StatsCard';
 import { ModuleCard } from '@/components/Dashboard/ModuleCard';
 import { RecentCases } from '@/components/Dashboard/RecentCases';
+import { ResponsiveGrid } from '@/components/Dashboard/ResponsiveGrid';
 import { NavigationItem, Module, DashboardStats, CaseOverview } from '@/types/dashboard';
 
 const SupervisorNavigation: NavigationItem[] = [
@@ -339,12 +341,10 @@ export const SupervisorDashboard: React.FC = () => {
     console.log(`Superviser le cas: ${caseId}`);
   };
 
-  const getTrendIcon = (trend: string) => {
-    switch (trend) {
-      case 'up': return 'fas fa-arrow-up text-green-500';
-      case 'down': return 'fas fa-arrow-down text-red-500';
-      default: return 'fas fa-minus text-gray-500';
-    }
+  const TrendIcon: React.FC<{ trend: string }> = ({ trend }) => {
+    if (trend === 'up') return <ArrowUpRight className="w-4 h-4 text-green-500" />;
+    if (trend === 'down') return <ArrowDownRight className="w-4 h-4 text-red-500" />;
+    return <Minus className="w-4 h-4 text-gray-500" />;
   };
 
   if (isLoading) {
@@ -357,7 +357,7 @@ export const SupervisorDashboard: React.FC = () => {
       >
         <div className="flex items-center justify-center min-h-64">
           <div className="text-center">
-            <i className="fas fa-spinner fa-spin text-4xl text-gray-400 mb-4"></i>
+            <Loader2 className="w-10 h-10 text-gray-400 mb-4 animate-spin inline-block" />
             <p className="text-gray-500">Chargement des données de supervision...</p>
           </div>
         </div>
@@ -380,7 +380,7 @@ export const SupervisorDashboard: React.FC = () => {
             <div key={index} className="bg-white rounded-lg p-4 border border-gray-200">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm font-medium text-gray-600">{kpi.label}</p>
-                <i className={getTrendIcon(kpi.trend)}></i>
+                <TrendIcon trend={kpi.trend} />
               </div>
               <div className="flex items-center justify-between">
                 <p className={`text-2xl font-bold text-${kpi.color}-600`}>{kpi.value}</p>
@@ -438,8 +438,8 @@ export const SupervisorDashboard: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
         {/* Performance APS */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            <i className="fas fa-user-check text-blue-500 mr-2"></i>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 inline-flex items-center">
+            <UserCheckIcon className="w-5 h-5 text-blue-500 mr-2" />
             Agents Psychosociaux
           </h3>
           <div className="space-y-4">
@@ -464,8 +464,8 @@ export const SupervisorDashboard: React.FC = () => {
 
         {/* Performance Opérateurs */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            <i className="fas fa-headset text-green-500 mr-2"></i>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 inline-flex items-center">
+            <Headphones className="w-5 h-5 text-green-500 mr-2" />
             Opérateurs Centre d'Écoute
           </h3>
           <div className="space-y-4">
@@ -486,8 +486,8 @@ export const SupervisorDashboard: React.FC = () => {
 
         {/* Performance Organisations */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            <i className="fas fa-building text-purple-500 mr-2"></i>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 inline-flex items-center">
+            <BuildingIcon className="w-5 h-5 text-purple-500 mr-2" />
             Organisations Partenaires
           </h3>
           <div className="space-y-4">
@@ -564,7 +564,7 @@ export const SupervisorDashboard: React.FC = () => {
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
           Modules de supervision stratégique
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-6">
+        <ResponsiveGrid variant="modules" gap="large">
           {SupervisorModules.map((module) => (
             <ModuleCard
               key={module.id}
@@ -572,7 +572,7 @@ export const SupervisorDashboard: React.FC = () => {
               onClick={() => handleModuleClick(module.id)}
             />
           ))}
-        </div>
+        </ResponsiveGrid>
       </div>
 
       {/* Graphiques et analytics */}
@@ -583,7 +583,7 @@ export const SupervisorDashboard: React.FC = () => {
           </h3>
           <div className="h-64 flex items-center justify-center text-gray-500">
             <div className="text-center">
-              <i className="fas fa-chart-area text-4xl mb-4"></i>
+              <LineChart className="w-8 h-8 mb-4 inline-block" />
               <p>Graphique des tendances évolutives</p>
               <p className="text-sm">(Charts.js - Évolution temporelle)</p>
             </div>
@@ -596,7 +596,7 @@ export const SupervisorDashboard: React.FC = () => {
           </h3>
           <div className="h-64 flex items-center justify-center text-gray-500">
             <div className="text-center">
-              <i className="fas fa-map text-4xl mb-4"></i>
+              <Map className="w-8 h-8 mb-4 inline-block" />
               <p>Cartographie des interventions</p>
               <p className="text-sm">(Carte interactive avec métriques)</p>
             </div>

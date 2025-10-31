@@ -14,6 +14,8 @@ import { AdminDashboard } from '@/pages/Dashboard/AdminDashboard';
 import { SupervisorDashboard } from '@/pages/Dashboard/SupervisorDashboard';
 import OperatorTriageUnprocessed from '@/pages/Triage/OperatorTriageUnprocessed';
 import OperatorTriageUrgent from '@/pages/Triage/OperatorTriageUrgent';
+import OperatorCaseView from '@/pages/Cases/OperatorCaseView';
+import OperatorCaseTreatment from '@/pages/Cases/OperatorCaseTreatment';
 
 // Test page
 import { TestUsersPage } from '@/pages/TestUsers/TestUsersPage';
@@ -110,6 +112,23 @@ function App() {
           element={
             <RoleProtectedRoute allowedRoles={["operateur"]}>
               <OperatorTriageUrgent />
+            </RoleProtectedRoute>
+          } 
+        />
+        {/* Operator cases */}
+        <Route 
+          path="/operator/cases/:id" 
+          element={
+            <RoleProtectedRoute allowedRoles={["operateur"]}>
+              <OperatorCaseView />
+            </RoleProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/operator/cases/:id/traitement" 
+          element={
+            <RoleProtectedRoute allowedRoles={["operateur"]}>
+              <OperatorCaseTreatment />
             </RoleProtectedRoute>
           } 
         />

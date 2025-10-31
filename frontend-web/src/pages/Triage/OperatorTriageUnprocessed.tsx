@@ -1,61 +1,48 @@
 import React, { useEffect, useState } from 'react';
 import { DashboardLayout } from '@/components/Layout/DashboardLayout';
-import { RecentCases } from '@/components/Dashboard/RecentCases';
+import { CasesTable } from '@/components/Triage/CasesTable';
 import { CaseOverview } from '@/types/dashboard';
+import { reportsService } from '@/services/reportsService';
 import { OperatorNavigation } from '@/pages/Dashboard/OperatorDashboard';
+import { useNavigate } from 'react-router-dom';
 
-const mockUnprocessedCases: CaseOverview[] = [
-  {
-    id: 'u1',
-    trackingNumber: 'MSA20241031-001',
-    urgency: 'moderate',
-    status: 'new',
-    type: 'Violence psychologique',
-    createdAt: new Date().toISOString(),
-    lastUpdate: new Date().toISOString(),
-  },
-  {
-    id: 'u2',
-    trackingNumber: 'MSA20241031-002',
-    urgency: 'low',
-    status: 'new',
-    type: 'Violence économique',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-    lastUpdate: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
-  },
-  {
-    id: 'u3',
-    trackingNumber: 'MSA20241030-015',
-    urgency: 'high',
-    status: 'pending',
-    type: 'Violence physique',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 26).toISOString(),
-    lastUpdate: new Date(Date.now() - 1000 * 60 * 60 * 20).toISOString(),
-  }
-];
+// Données réelles chargées depuis l'API
 
 export const OperatorTriageUnprocessed: React.FC = () => {
   const [cases, setCases] = useState<CaseOverview[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    // TODO: Remplacer par un appel API /triage?status=unprocessed
-    setLoading(true);
-    const timer = setTimeout(() => {
-      setCases(mockUnprocessedCases);
-      setLoading(false);
-    }, 400);
-    return () => clearTimeout(timer);
+    let cancelled = false;
+    (async () => {
+      try {
+        setError(null);
+        setLoading(true);
+        // Utilise l'endpoint dédié
+        const data = await reportsService.listUnprocessed(25);
+        if (!cancelled) setCases(data);
+      } catch (e: any) {
+        if (!cancelled) setError(e.message || 'Erreur lors du chargement des cas.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true };
   }, []);
 
-  const handleCaseClick = (id: string) => {
-    console.log('Open case', id);
+  const handleVoir = (id: string) => {
+    navigate(`/operator/cases/${encodeURIComponent(id)}`);
+  };
+  const handleTraitement = (id: string) => {
+    navigate(`/operator/cases/${encodeURIComponent(id)}/traitement`);
   };
 
   return (
     <DashboardLayout
-      title="Triage"
-      subtitle="Non traités"
+      title="NOUVEAUX CAS (NON TRAITÉS)"
+      subtitle="Triage des cas"
       navigationItems={OperatorNavigation}
       userRole="operateur"
     >
@@ -69,12 +56,15 @@ export const OperatorTriageUnprocessed: React.FC = () => {
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 p-6 text-gray-500">
           Chargement...
         </div>
+      ) : error ? (
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-red-200 p-6 text-red-600">
+          {error}
+        </div>
       ) : (
-        <RecentCases
+        <CasesTable
           cases={cases}
-          title="Non traités"
-          onViewAll={() => console.log('Voir tous')}
-          onCaseClick={handleCaseClick}
+          onVoir={handleVoir}
+          onTraitement={handleTraitement}
         />
       )}
     </DashboardLayout>
