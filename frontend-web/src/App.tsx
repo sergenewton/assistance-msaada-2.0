@@ -6,12 +6,14 @@ import { useAuthStore } from '@/store/authStore';
 import { LoginPage } from '@/pages/Auth/LoginPage';
 
 // Dashboard pages
-import { RoleDashboard } from '@/pages/Dashboard/RoleDashboard';
+import { RoleDashboard, RoleProtectedRoute } from '@/pages/Dashboard/RoleDashboard';
 import { APSDashboard } from '@/pages/Dashboard/APSDashboard';
 import { OperatorDashboard } from '@/pages/Dashboard/OperatorDashboard';
 import { OrganizationDashboard } from '@/pages/Dashboard/OrganizationDashboard';
 import { AdminDashboard } from '@/pages/Dashboard/AdminDashboard';
 import { SupervisorDashboard } from '@/pages/Dashboard/SupervisorDashboard';
+import OperatorTriageUnprocessed from '@/pages/Triage/OperatorTriageUnprocessed';
+import OperatorTriageUrgent from '@/pages/Triage/OperatorTriageUrgent';
 
 // Test page
 import { TestUsersPage } from '@/pages/TestUsers/TestUsersPage';
@@ -91,6 +93,24 @@ function App() {
             <ProtectedRoute>
               <OperatorDashboard />
             </ProtectedRoute>
+          } 
+        />
+
+        {/* Operator triage sub-routes */}
+        <Route 
+          path="/operator/triage/unprocessed" 
+          element={
+            <RoleProtectedRoute allowedRoles={["operateur"]}>
+              <OperatorTriageUnprocessed />
+            </RoleProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/operator/triage/urgent" 
+          element={
+            <RoleProtectedRoute allowedRoles={["operateur"]}>
+              <OperatorTriageUrgent />
+            </RoleProtectedRoute>
           } 
         />
         

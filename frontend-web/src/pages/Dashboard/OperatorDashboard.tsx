@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { Loader2, AlertTriangle, BarChart2, Circle, CheckCircle, Clock } from 'lucide-react';
 import { DashboardLayout } from '@/components/Layout/DashboardLayout';
 import { StatsCard } from '@/components/Dashboard/StatsCard';
 import { ModuleCard } from '@/components/Dashboard/ModuleCard';
 import { RecentCases } from '@/components/Dashboard/RecentCases';
+import { ResponsiveGrid } from '@/components/Dashboard/ResponsiveGrid';
 import { NavigationItem, Module, DashboardStats, CaseOverview } from '@/types/dashboard';
 
-const OperatorNavigation: NavigationItem[] = [
+export const OperatorNavigation: NavigationItem[] = [
   {
     id: 'dashboard',
     label: 'Tableau de bord',
@@ -15,28 +17,26 @@ const OperatorNavigation: NavigationItem[] = [
     isActive: true
   },
   {
-    id: 'triage',
-    label: 'Triage',
+    id: 'triages',
+    label: 'Triages',
     icon: 'fas fa-sort-amount-up',
     path: '/operator/triage',
     permissions: ['cases.triage'],
-    badge: 12,
+    badge: 15,
     children: [
       {
-        id: 'triage-new',
-        label: 'Nouveaux signalements',
+        id: 'triage-unprocessed',
+        label: 'Non traités',
         icon: 'fas fa-inbox',
-        path: '/operator/triage/new',
-        permissions: ['cases.triage'],
-        badge: 8
+        path: '/operator/triage/unprocessed',
+        permissions: ['cases.triage']
       },
       {
         id: 'triage-urgent',
         label: 'Urgents',
         icon: 'fas fa-exclamation-triangle',
         path: '/operator/triage/urgent',
-        permissions: ['urgency.evaluate'],
-        badge: 4
+        permissions: ['urgency.evaluate']
       }
     ]
   },
@@ -49,66 +49,72 @@ const OperatorNavigation: NavigationItem[] = [
     children: [
       {
         id: 'cases-active',
-        label: 'Cas actifs',
-        icon: 'fas fa-clock',
+        label: 'Actifs',
+        icon: 'fas fa-folder',
         path: '/operator/cases/active',
         permissions: ['cases.view.all'],
-        badge: 25
+        badge: 156
       },
       {
-        id: 'cases-assignment',
-        label: 'Attribution APS',
-        icon: 'fas fa-user-plus',
-        path: '/operator/cases/assignment',
-        permissions: ['cases.assign']
+        id: 'cases-in-progress',
+        label: 'En cours',
+        icon: 'fas fa-spinner',
+        path: '/operator/cases/in-progress',
+        permissions: ['cases.view.all']
       },
       {
-        id: 'cases-follow-up',
-        label: 'Suivi',
-        icon: 'fas fa-eye',
-        path: '/operator/cases/follow-up',
+        id: 'cases-closed',
+        label: 'Clôturés',
+        icon: 'fas fa-check-circle',
+        path: '/operator/cases/closed',
         permissions: ['cases.view.all']
       }
     ]
   },
   {
-    id: 'referrals',
-    label: 'Référencements',
-    icon: 'fas fa-share-alt',
-    path: '/operator/referrals',
-    permissions: ['referrals.manage'],
+    id: 'aps',
+    label: 'Gestion APS',
+    icon: 'fas fa-user-check',
+    path: '/operator/aps',
+    permissions: ['cases.assign'],
     children: [
       {
-        id: 'referrals-pending',
-        label: 'En attente',
-        icon: 'fas fa-hourglass-half',
-        path: '/operator/referrals/pending',
-        permissions: ['referrals.manage'],
-        badge: 6
+        id: 'aps-assignments',
+        label: 'Assignations',
+        icon: 'fas fa-user-plus',
+        path: '/operator/aps/assignments',
+        permissions: ['cases.assign']
       },
       {
-        id: 'referrals-organizations',
-        label: 'Organisations',
-        icon: 'fas fa-building',
-        path: '/operator/referrals/organizations',
-        permissions: ['organizations.contact']
+        id: 'aps-workload',
+        label: 'Charge de travail',
+        icon: 'fas fa-clipboard-check',
+        path: '/operator/aps/workload',
+        permissions: ['cases.view.all']
       }
     ]
   },
   {
     id: 'monitoring',
-    label: 'Surveillance',
+    label: 'Surveillances',
     icon: 'fas fa-chart-line',
     path: '/operator/monitoring',
     permissions: ['cases.view.all'],
+    badge: 8,
     children: [
       {
         id: 'monitoring-delays',
         label: 'Retards',
         icon: 'fas fa-clock',
         path: '/operator/monitoring/delays',
-        permissions: ['cases.view.all'],
-        badge: 3
+        permissions: ['cases.view.all']
+      },
+      {
+        id: 'monitoring-reminders',
+        label: 'Relances',
+        icon: 'fas fa-bell',
+        path: '/operator/monitoring/reminders',
+        permissions: ['alerts.view']
       },
       {
         id: 'monitoring-validation',
@@ -120,12 +126,36 @@ const OperatorNavigation: NavigationItem[] = [
     ]
   },
   {
-    id: 'alerts',
+    id: 'organizations',
+    label: 'Gestion référencements',
+    icon: 'fas fa-building',
+    path: '/operator/organizations',
+    permissions: ['organizations.contact'],
+    children: [
+      {
+        id: 'org-referrals',
+        label: 'Référencements',
+        icon: 'fas fa-share-alt',
+        path: '/operator/organizations/referrals',
+        permissions: ['referrals.manage']
+      },
+      {
+        id: 'org-followup',
+        label: 'Suivi',
+        icon: 'fas fa-eye',
+        path: '/operator/organizations/follow-up',
+        permissions: ['organizations.contact']
+      }
+    ]
+  },
+  // Account section custom item to preserve prior 'Alertes'
+  {
+    id: 'account-alerts',
     label: 'Alertes',
     icon: 'fas fa-bell',
     path: '/operator/alerts',
     permissions: ['alerts.view'],
-    badge: 7
+    badge: 8
   }
 ];
 
@@ -241,9 +271,10 @@ export const OperatorDashboard: React.FC = () => {
     console.log(`Ouvrir le cas: ${caseId}`);
   };
 
-  const handleTriageClick = () => {
-    console.log('Aller au triage');
-  };
+  // Conserved for future navigation hooks if needed
+  // const handleTriageClick = () => {
+  //   console.log('Aller au triage');
+  // };
 
   if (isLoading) {
     return (
@@ -255,7 +286,7 @@ export const OperatorDashboard: React.FC = () => {
       >
         <div className="flex items-center justify-center min-h-64">
           <div className="text-center">
-            <i className="fas fa-spinner fa-spin text-4xl text-gray-400 mb-4"></i>
+            <Loader2 className="w-10 h-10 text-gray-400 mb-4 animate-spin inline-block" />
             <p className="text-gray-500">Chargement des données...</p>
           </div>
         </div>
@@ -270,17 +301,16 @@ export const OperatorDashboard: React.FC = () => {
       navigationItems={OperatorNavigation}
       userRole="operateur"
     >
-      {/* Alertes urgentes */}
+      {/* Bannière alertes urgentes (conservée) */}
       <div className="mb-6">
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <div className="flex items-center">
-            <i className="fas fa-exclamation-triangle text-red-600 text-xl mr-3"></i>
+            <AlertTriangle className="w-5 h-5 text-red-600 mr-3" />
             <div className="flex-1">
               <p className="font-medium text-red-900">8 cas urgents nécessitent votre attention immédiate</p>
               <p className="text-sm text-red-700">Dernière mise à jour : il y a 5 minutes</p>
             </div>
             <button 
-              onClick={handleTriageClick}
               className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
             >
               Voir le triage
@@ -288,49 +318,17 @@ export const OperatorDashboard: React.FC = () => {
           </div>
         </div>
       </div>
+      {/* (Alertes & Rappels sera affiché plus bas à côté de la Performance) */}
 
-      {/* Statistiques principales */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 sm:gap-6 mb-8 transition-all duration-300 ease-in-out">
-        <StatsCard
-          title="Total des cas"
-          value={stats.totalCases}
-          icon="fas fa-folder"
-          color="blue"
-          trend={{ value: 8, isPositive: true }}
-        />
-        <StatsCard
-          title="Cas actifs"
-          value={stats.activeCases}
-          icon="fas fa-clock"
-          color="purple"
-          onClick={() => handleModuleClick('case-management')}
-        />
-        <StatsCard
-          title="Urgents"
-          value={stats.urgentCases}
-          icon="fas fa-exclamation-triangle"
-          color="red"
-          onClick={handleTriageClick}
-        />
-        <StatsCard
-          title="Terminés"
-          value={stats.completedCases}
-          icon="fas fa-check-circle"
-          color="green"
-        />
-        <StatsCard
-          title="Actions en attente"
-          value={stats.pendingActions}
-          icon="fas fa-hourglass-half"
-          color="yellow"
-        />
-        <StatsCard
-          title="Temps de réponse"
-          value={`${stats.responseTime}h`}
-          icon="fas fa-tachometer-alt"
-          color="indigo"
-          trend={{ value: 15, isPositive: false }}
-        />
+      {/* Indicateurs principaux */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4 sm:gap-6 mb-8 transition-all duration-300 ease-in-out">
+        <StatsCard title="Nouveaux (24h)" value={15} icon="fas fa-inbox" color="blue" />
+        <StatsCard title="Actions requises" value={8} icon="fas fa-exclamation-triangle" color="yellow" />
+        <StatsCard title="Traités auj." value={42} icon="fas fa-check-circle" color="green" />
+        <StatsCard title="Critiques" value={5} icon="fas fa-circle" color="red" />
+        <StatsCard title="Cas actifs" value={stats.activeCases} icon="fas fa-folder" color="blue" />
+        <StatsCard title="Temps réponse" value={`${stats.responseTime}h`} icon="fas fa-clock" color="purple" />
+        <StatsCard title="APS dispo" value={`12/15`} icon="fas fa-users" color="indigo" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
@@ -338,24 +336,22 @@ export const OperatorDashboard: React.FC = () => {
         <div className="lg:col-span-2">
           <RecentCases
             cases={recentCases}
-            title="Signalements récents"
+            title="Nouveaux signalements"
             onViewAll={() => console.log('Voir tous les signalements')}
             onCaseClick={handleCaseClick}
           />
         </div>
 
-        {/* Actions urgentes */}
+        {/* Actions urgentes (à côté des nouveaux signalements) */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
-            Actions urgentes
-          </h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Actions urgentes</h3>
           <div className="space-y-4">
             <div className="border border-red-200 bg-red-50 rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
-                <h4 className="font-medium text-red-900">Triage en attente</h4>
+                <h4 className="font-medium text-red-900">Cas urgents</h4>
                 <span className="bg-red-600 text-white text-xs px-2 py-1 rounded-full">8</span>
               </div>
-              <p className="text-sm text-red-700 mb-3">Nouveaux signalements à évaluer</p>
+              <p className="text-sm text-red-700 mb-3">Cas nécessitant attention immédiate</p>
               <button className="w-full bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 transition-colors">
                 Traiter maintenant
               </button>
@@ -382,7 +378,87 @@ export const OperatorDashboard: React.FC = () => {
                 Examiner
               </button>
             </div>
+
+            <div className="border border-orange-200 bg-orange-50 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="font-medium text-orange-900">Cas en attente de référencement</h4>
+                <span className="bg-orange-600 text-white text-xs px-2 py-1 rounded-full">5</span>
+              </div>
+              <p className="text-sm text-orange-700 mb-3">Sélectionner et référencer vers une organisation</p>
+              <button className="w-full bg-orange-600 text-white py-2 rounded-lg hover:bg-orange-700 transition-colors">
+                Assigner
+              </button>
+            </div>
           </div>
+        </div>
+      </div>
+
+      {/* Ligne suivante: Performance aujourd'hui + Alertes & Rappels côte à côte */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        {/* Performance aujourd'hui */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
+            Performance aujourd'hui
+          </h3>
+          <div className="space-y-4 text-sm">
+            <div className="flex items-start justify-between">
+              <div className="inline-flex items-center text-gray-700 dark:text-gray-300">
+                <Clock className="w-4 h-4 mr-2" /> Temps moyen réponse:
+              </div>
+              <div className="text-right">
+                <div>1 h 12 min</div>
+                <div className="text-xs text-gray-500">Objectif: &lt; 2h <CheckCircle className="inline w-4 h-4 text-green-600 ml-1" /></div>
+              </div>
+            </div>
+            <div className="flex items-start justify-between">
+              <span className="text-gray-700 dark:text-gray-300">Cas traités: 42</span>
+              <span className="text-xs text-gray-500">Objectif: 40-50 <CheckCircle className="inline w-4 h-4 text-green-600 ml-1" /></span>
+            </div>
+            <div className="flex items-start justify-between">
+              <span className="text-gray-700 dark:text-gray-300">APS assignés: 38</span>
+              <span className="text-xs text-gray-500">Taux: 90% <CheckCircle className="inline w-4 h-4 text-green-600 ml-1" /></span>
+            </div>
+          </div>
+        </div>
+
+        {/* Alertes & Rappels */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6 inline-flex items-center">
+            <AlertTriangle className="w-5 h-5 text-yellow-600 mr-2" />
+            Alertes & Rappels
+          </h3>
+          <ul className="space-y-3 text-sm">
+            <li className="flex items-start justify-between">
+              <div className="flex items-start">
+                <Circle className="w-3.5 h-3.5 text-yellow-400 mr-2 mt-1" />
+                <span className="text-gray-700 dark:text-gray-300">3 cas sans mise à jour depuis 7+ jours</span>
+              </div>
+              <div className="text-right space-x-2">
+                <button className="text-blue-600 hover:underline text-xs">Voir les cas</button>
+                <button className="text-blue-600 hover:underline text-xs">Envoyer relance automatique</button>
+              </div>
+            </li>
+            <li className="flex items-start justify-between">
+              <div className="flex items-start">
+                <Circle className="w-3.5 h-3.5 text-yellow-400 mr-2 mt-1" />
+                <span className="text-gray-700 dark:text-gray-300">5 référencements en attente de réponse (&gt;48h)</span>
+              </div>
+              <div className="text-right space-x-2">
+                <button className="text-blue-600 hover:underline text-xs">Voir détails</button>
+                <button className="text-blue-600 hover:underline text-xs">Relancer organisations</button>
+              </div>
+            </li>
+            <li className="flex items-start justify-between">
+              <div className="flex items-start">
+                <Circle className="w-3.5 h-3.5 text-orange-500 mr-2 mt-1" />
+                <span className="text-gray-700 dark:text-gray-300">2 APS ont atteint 15 cas actifs (limite recommandée)</span>
+              </div>
+              <div className="text-right space-x-2">
+                <button className="text-blue-600 hover:underline text-xs">Voir répartition</button>
+                <button className="text-blue-600 hover:underline text-xs">Réassigner certains cas</button>
+              </div>
+            </li>
+          </ul>
         </div>
       </div>
 
@@ -394,7 +470,7 @@ export const OperatorDashboard: React.FC = () => {
           </h3>
           <div className="h-64 flex items-center justify-center text-gray-500">
             <div className="text-center">
-              <i className="fas fa-chart-line text-4xl mb-4"></i>
+              <BarChart2 className="w-8 h-8 mb-4 inline-block" />
               <p>Graphique des tendances</p>
               <p className="text-sm">(À implémenter avec Chart.js)</p>
             </div>
@@ -451,7 +527,7 @@ export const OperatorDashboard: React.FC = () => {
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
           Modules de travail
         </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-4 sm:gap-6 transition-all duration-300 ease-in-out">
+        <ResponsiveGrid variant="modules" gap="medium">
           {OperatorModules.map((module) => (
             <ModuleCard
               key={module.id}
@@ -459,7 +535,7 @@ export const OperatorDashboard: React.FC = () => {
               onClick={() => handleModuleClick(module.id)}
             />
           ))}
-        </div>
+        </ResponsiveGrid>
       </div>
     </DashboardLayout>
   );
