@@ -34,13 +34,45 @@ STATUS_FLAG=false
 STOP_FLAG=false
 DB_MODE="" # docker|local
 
+# --- Colors & styling ---
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+PURPLE='\033[0;35m'
+CYAN='\033[0;36m'
+NC='\033[0m'
+
 # Ensure dirs
 mkdir -p "$LOG_DIR" "$STATE_DIR"
 
 # --- Helpers ---
-info() { echo "[INFO] $*"; }
-warn() { echo "[WARN] $*" >&2; }
-err()  { echo "[ERROR] $*" >&2; }
+info() { echo -e "${GREEN}[INFO]${NC} $*"; }
+warn() { echo -e "${YELLOW}[WARN]${NC} $*" >&2; }
+err()  { echo -e "${RED}[ERROR]${NC} $*" >&2; }
+
+show_banner() {
+  echo -e "${PURPLE}"
+  cat << 'EOF'
+
+ █████╗ ███████╗███████╗██╗███████╗████████╗ █████╗ ███╗   ██╗ ██████╗███████╗
+██╔══██╗██╔════╝██╔════╝██║██╔════╝╚══██╔══╝██╔══██╗████╗  ██║██╔════╝██╔════╝
+███████║███████╗███████╗██║███████╗   ██║   ███████║██╔██╗ ██║██║     █████╗  
+██╔══██║╚════██║╚════██║██║╚════██║   ██║   ██╔══██║██║╚██╗██║██║     ██╔══╝  
+██║  ██║███████║███████║██║███████║   ██║   ██║  ██║██║ ╚████║╚██████╗███████╗
+╚═╝  ╚═╝╚══════╝╚══════╝╚═╝╚══════╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═══╝ ╚═════╝╚══════╝
+
+             ██████╗  ███████╗███████╗██╗███████╗███╗   ██╗ ██████╗ ███████╗
+             ██╔══██╗ ██╔════╝██╔════╝██║██╔════╝████╗  ██║██╔════╝ ██╔════╝
+             ██║  ██║ █████╗  █████╗  ██║█████╗  ██╔██╗ ██║██║  ███╗█████╗  
+             ██║  ██║ ██╔══╝  ██╔══╝  ██║██╔══╝  ██║╚██╗██║██║   ██║██╔══╝  
+             ██████╔╝ ███████╗██║     ██║███████╗██║ ╚████║╚██████╔╝███████╗
+             ╚═════╝  ╚══════╝╚═╝     ╚═╝╚══════╝╚═╝  ╚═══╝ ╚═════╝ ╚══════╝
+
+                         ASSISTANCE MSAADA 2.0 LAUNCHER
+EOF
+  echo -e "${NC}"
+}
 
 is_port_open() {
   local host="$1"; local port="$2";
@@ -191,15 +223,57 @@ stop_db_docker() {
 }
 
 status_all() {
+  echo -e "${BLUE}──────────────────────────────── STATUS ───────────────────────────────${NC}"
+
   # DB
-  if [[ "$DB_MODE" == "docker" ]]; then status_db_docker; else status_db_local; fi
+  local db_line
+  if [[ "$DB_MODE" == "docker" ]]; then
+    if is_port_open 127.0.0.1 3307; then
+      db_line="🗄️  DB (Docker)      : ${GREEN}UP on 3307${NC}"
+    else
+      db_line="🗄️  DB (Docker)      : ${RED}DOWN${NC}"
+    fi
+  else
+    if is_port_open 127.0.0.1 3306; then
+      db_line="🗄️  DB (Local)       : ${GREEN}UP on 3306${NC}"
+    else
+      db_line="🗄️  DB (Local)       : ${RED}DOWN${NC}"
+    fi
+  fi
+  echo -e "$db_line"
+
   # Backend
-  if pid_is_running "$BACKEND_PID"; then echo "Backend: RUNNING (pid $(cat "$BACKEND_PID"))"; else echo "Backend: STOPPED"; fi
+  local be_line health_line
+  if pid_is_running "$BACKEND_PID"; then
+    be_line="🔧 Backend (API)   : ${GREEN}RUNNING${NC} (pid $(cat "$BACKEND_PID"))"
+  else
+    be_line="🔧 Backend (API)   : ${RED}STOPPED${NC}"
+  fi
+  echo -e "$be_line"
   code=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/api/health || true)
-  [[ "$code" == "200" ]] && echo "Backend health: OK" || echo "Backend health: $code"
+  if [[ "$code" == "200" ]]; then
+    health_line="   └─ Health        : ${GREEN}OK${NC}"
+  else
+    health_line="   └─ Health        : ${YELLOW}$code${NC}"
+  fi
+  echo -e "$health_line"
+
   # Frontend
-  if pid_is_running "$FRONTEND_PID"; then echo "Frontend: RUNNING (pid $(cat "$FRONTEND_PID"))"; else echo "Frontend: STOPPED"; fi
-  if is_port_open 127.0.0.1 3000; then echo "Frontend port 3000: OPEN"; else echo "Frontend port 3000: CLOSED"; fi
+  local fe_line port_line
+  if pid_is_running "$FRONTEND_PID"; then
+    fe_line="🎨 Frontend (Vite) : ${GREEN}RUNNING${NC} (pid $(cat "$FRONTEND_PID"))"
+  else
+    fe_line="🎨 Frontend (Vite) : ${RED}STOPPED${NC}"
+  fi
+  echo -e "$fe_line"
+  if is_port_open 127.0.0.1 3000; then
+    port_line="   └─ Port 3000     : ${GREEN}OPEN${NC}"
+  else
+    port_line="   └─ Port 3000     : ${YELLOW}CLOSED${NC}"
+  fi
+  echo -e "$port_line"
+
+  echo -e "${BLUE}────────────────────────────────────────────────────────────────────────${NC}"
 }
 
 stop_all() {
@@ -239,6 +313,7 @@ fi
 echo "$DB_MODE" > "$MODE_FILE"
 
 # --- Execute requested actions ---
+show_banner
 if [[ "$STOP_FLAG" == true ]]; then
   stop_all
   exit 0
