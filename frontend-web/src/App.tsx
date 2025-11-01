@@ -7,6 +7,10 @@ import { LoginPage } from '@/pages/Auth/LoginPage';
 
 // Dashboard pages
 import { RoleDashboard, RoleProtectedRoute } from '@/pages/Dashboard/RoleDashboard';
+// Admin pages
+import { UsersListPage } from '@/pages/Admin/UsersListPage';
+import { RolesPermissionsPage } from '@/pages/Admin/RolesPermissionsPage';
+import TestRoutePage from '@/pages/TestRoutePage';
 import { APSDashboard } from '@/pages/Dashboard/APSDashboard';
 import { OperatorDashboard } from '@/pages/Dashboard/OperatorDashboard';
 import { OrganizationDashboard } from '@/pages/Dashboard/OrganizationDashboard';
@@ -149,6 +153,39 @@ function App() {
               <AdminDashboard />
             </ProtectedRoute>
           } 
+        />
+        {/* Backward-compat alias for Admin dashboard */}
+        <Route 
+          path="/admin/dashboard" 
+          element={
+            <ProtectedRoute>
+              <AdminDashboard />
+            </ProtectedRoute>
+          } 
+        />
+
+        {/* Admin > Users */}
+        <Route
+          path="/admin/users/list"
+          element={
+            <RoleProtectedRoute allowedRoles={["admin"]}>
+              <UsersListPage />
+            </RoleProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/users/roles"
+          element={
+            <RoleProtectedRoute allowedRoles={["admin"]}>
+              <RolesPermissionsPage />
+            </RoleProtectedRoute>
+          }
+        />
+        
+        {/* Test route */}
+        <Route
+          path="/test-route-ok"
+          element={<TestRoutePage />}
         />
         
         <Route 
