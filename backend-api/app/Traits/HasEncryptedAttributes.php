@@ -8,13 +8,10 @@ use Illuminate\Contracts\Encryption\DecryptException;
 trait HasEncryptedAttributes
 {
     /**
-     * Obtient les attributs qui doivent être chiffrés
-     * Cette méthode doit être définie dans la classe qui utilise le trait
+     * Attributs qui doivent être chiffrés
      */
-    protected function getEncryptedAttributes()
-    {
-        return property_exists($this, 'encrypted') ? $this->encrypted : [];
-    }
+    // Default list in case the model doesn't define $encrypted
+    protected $encryptedAttributes = [];
 
     /**
      * Boot du trait
@@ -35,7 +32,7 @@ trait HasEncryptedAttributes
      */
     protected function encryptAttributes()
     {
-        foreach ($this->getEncryptedAttributes() as $attribute) {
+        foreach ($this->encryptedAttributesList() as $attribute) {
             if (isset($this->attributes[$attribute]) && !empty($this->attributes[$attribute])) {
                 $this->attributes[$attribute] = Crypt::encryptString($this->attributes[$attribute]);
             }
@@ -47,14 +44,9 @@ trait HasEncryptedAttributes
      */
     protected function decryptAttributes()
     {
-        foreach ($this->getEncryptedAttributes() as $attribute) {
+        foreach ($this->encryptedAttributesList() as $attribute) {
             if (isset($this->attributes[$attribute]) && !empty($this->attributes[$attribute])) {
-                try {
-                    $this->attributes[$attribute] = Crypt::decryptString($this->attributes[$attribute]);
-                } catch (DecryptException $e) {
-                    // Si le déchiffrement échoue, on garde la valeur originale
-                    // Cela peut arriver si la donnée n'était pas encore chiffrée
-                }
+                $this->attributes[$attribute] = $this->tryDecrypt($this->attributes[$attribute]);
             }
         }
     }
@@ -75,12 +67,39 @@ trait HasEncryptedAttributes
     public function getEncryptedAttribute($key)
     {
         if (isset($this->attributes[$key]) && !empty($this->attributes[$key])) {
-            try {
-                return Crypt::decryptString($this->attributes[$key]);
-            } catch (DecryptException $e) {
-                return $this->attributes[$key];
-            }
+            return $this->tryDecrypt($this->attributes[$key]);
         }
         return null;
+    }
+
+    /**
+     * Try to decrypt a value using decryptString first, then fallback to decrypt
+     * to support legacy data encrypted via helper encrypt().
+     */
+    protected function tryDecrypt($value)
+    {
+        try {
+            return Crypt::decryptString($value);
+        } catch (DecryptException $e) {
+            try {
+                // Fallback for payloads created by encrypt() helper
+                return Crypt::decrypt($value);
+            } catch (DecryptException $e2) {
+                // Return original if not decryptable
+                return $value;
+            }
+        }
+    }
+
+    /**
+     * Resolve which attributes should be encrypted.
+     * Prefer model-defined $encrypted when available.
+     */
+    protected function encryptedAttributesList(): array
+    {
+        if (property_exists($this, 'encrypted') && is_array($this->encrypted)) {
+            return $this->encrypted;
+        }
+        return $this->encryptedAttributes;
     }
 }

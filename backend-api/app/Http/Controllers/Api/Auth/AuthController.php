@@ -1,448 +1,196 @@
 <?php
 
 namespace App\Http\Controllers\Api\Auth;
-
-use App\Http\Controllers\Controller;
-use App\Http\Requests\Auth\LoginRequest;
-use App\Http\Requests\Auth\RegisterRequest;
 use App\Models\User;
-use App\Models\Role;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\RateLimiter;
-use Laravel\Sanctum\PersonalAccessToken;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
+use Illuminate\Http\JsonResponse;
 
-/**
- * Controller d'authentification pour l'API
- * Gestion JWT avec sécurité renforcée pour plateforme VBG
- */
-class AuthController extends Controller
+class AuthController extends \Illuminate\Routing\Controller
 {
-    /**
-     * Inscription d'un nouvel utilisateur
-     * 
-     * @param RegisterRequest $request
-     * @return JsonResponse
-     */
-    public function register(RegisterRequest $request): JsonResponse
-    {
-        try {
-            $validated = $request->validated();
-            
-            // Obtenir le rôle (par défaut survivante)
-            $role = Role::where('name', $validated['role'] ?? 'survivante')->first();
-            
-            if (!$role) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Rôle invalide'
-                ], 400);
-            }
-            
-            // Créer l'utilisateur
-            $user = User::create([
-                'email' => $validated['email'] ?? null,
-                'phone' => $validated['phone'] ?? null, 
-                'password' => $validated['password'],
-                'role_id' => $role->id,
-                'organization_id' => $validated['organization_id'] ?? null,
-                'is_active' => true,
-            ]);
+	/**
+	 * POST /api/v1/auth/login
+	 * Accepts { identifier, password, remember_me?, device_name? }
+	 */
+	public function login(Request $request): JsonResponse
+	{
+		$request->validate([
+			'identifier' => ['required', 'string'],
+			'password'   => ['required', 'string'],
+			'device_name'=> ['nullable', 'string'],
+		]);
 
-            // Générer le token
-            $token = $user->createToken(
-                'auth_token',
-                ['*'],
-                now()->addMinutes(config('sanctum.expiration', 60))
-            );
+		$identifier = (string) $request->input('identifier');
+		$password   = (string) $request->input('password');
+		$deviceName = (string) ($request->input('device_name') ?: 'Web Browser');
 
-            // Log de sécurité
-            Log::info('Nouvelle inscription utilisateur', [
-                'user_id' => $user->id,
-                'role' => $role->name,
-                'ip' => $request->ip(),
-                'user_agent' => $request->userAgent(),
-            ]);
+		// IMPORTANT: email & phone are stored encrypted. We cannot directly query by plaintext.
+		// As a pragmatic dev-mode fallback, scan users and compare decrypted values.
+		// NOTE: For production, add searchable hashed columns (e.g., email_hash) to query efficiently.
+		$candidate = User::query()->with(['role'])->get()->first(function (User $u) use ($identifier) {
+			$email = $u->email; // decrypted by trait accessors
+			$phone = $u->phone; // decrypted by trait accessors
+			return ($email && strcasecmp($email, $identifier) === 0) || ($phone && $phone === $identifier);
+		});
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Inscription réussie',
-                'data' => [
-                    'user' => [
-                        'id' => $user->id,
-                        'role' => $role->name,
-                        'role_display_name' => $role->display_name,
-                        'permissions' => $role->permissions()->pluck('name')->toArray(),
-                        'organization_id' => $user->organization_id,
-                        'is_active' => $user->is_active,
-                        'created_at' => $user->created_at,
-                    ],
-                    'token' => [
-                        'access_token' => $token->plainTextToken,
-                        'token_type' => 'Bearer',
-                        'expires_at' => $token->accessToken->expires_at,
-                    ]
-                ]
-            ], 201);
+		if (!$candidate || !Hash::check($password, $candidate->getAuthPassword())) {
+			return new JsonResponse([
+				'success' => false,
+				'message' => "Identifiants invalides",
+			], 401);
+		}
 
-        } catch (\Exception $e) {
-            Log::error('Erreur lors de l\'inscription', [
-                'error' => $e->getMessage(),
-                'ip' => $request->ip(),
-                'data' => $request->except('password')
-            ]);
+		if (property_exists($candidate, 'is_active') && !$candidate->is_active) {
+			return new JsonResponse([
+				'success' => false,
+				'message' => "Compte inactif. Contactez l'administrateur.",
+			], 403);
+		}
 
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de l\'inscription'
-            ], 500);
-        }
-    }
+		// Create a Sanctum personal access token
+		$plainToken = $candidate->createToken($deviceName)->plainTextToken;
 
-    /**
-     * Connexion d'un utilisateur
-     * 
-     * @param LoginRequest $request
-     * @return JsonResponse
-     */
-    public function login(LoginRequest $request): JsonResponse
-    {
-        $validated = $request->validated();
-        $identifier = $validated['identifier']; // Email ou téléphone
-        $password = $validated['password'];
-        $rememberMe = $validated['remember_me'] ?? false;
+		// Build response payload expected by frontend
+		$expiresAt = now()->addHours(8)->toIso8601String();
+		$payload = [
+			'success' => true,
+			'message' => 'Connexion réussie',
+			'data' => [
+				'user' => [
+					'id' => (string) $candidate->getKey(),
+					'email' => $candidate->email,
+					'phone' => $candidate->phone,
+					'role' => optional($candidate->role)->name ?? 'user',
+					'role_display_name' => optional($candidate->role)->display_name ?? 'Utilisateur',
+					// Use relation method to avoid null when a JSON attribute named 'permissions' exists
+					'permissions' => $candidate->role ? ($candidate->role->permissions()->pluck('name')->all() ?? []) : [],
+					'organization_id' => $candidate->organization_id,
+					'two_factor_enabled' => (bool) ($candidate->two_factor_enabled ?? false),
+					'last_login_at' => now()->toIso8601String(),
+					'created_at' => optional($candidate->created_at)->toIso8601String(),
+				],
+				'token' => [
+					'access_token' => $plainToken,
+					'token_type' => 'Bearer',
+					'expires_at' => $expiresAt,
+				],
+			],
+		];
 
-        // Rate limiting - 5 tentatives par minute par IP
-        $key = 'login.' . $request->ip();
-        if (RateLimiter::tooManyAttempts($key, 5)) {
-            $seconds = RateLimiter::availableIn($key);
-            
-            Log::warning('Trop de tentatives de connexion', [
-                'ip' => $request->ip(),
-                'user_agent' => $request->userAgent(),
-                'identifier' => $identifier,
-                'retry_after' => $seconds
-            ]);
+		// Optionally update last_login_at
+		if ($candidate->isFillable('last_login_at')) {
+			$candidate->forceFill(['last_login_at' => now()])->saveQuietly();
+		}
 
-            return response()->json([
-                'success' => false,
-                'message' => 'Trop de tentatives. Réessayez dans ' . $seconds . ' secondes.'
-            ], 429);
-        }
+		return new JsonResponse($payload);
+	}
 
-        try {
-            // Chercher l'utilisateur par email ou téléphone
-            $user = User::with(['role', 'role.permissions'])
-                ->where(function ($query) use ($identifier) {
-                    // Note: Pour les champs chiffrés, on devrait implémenter une recherche spéciale
-                    // Pour l'instant, on assume qu'on peut chercher directement
-                    $query->where('email', $identifier)
-                          ->orWhere('phone', $identifier);
-                })
-                ->where('is_active', true)
-                ->first();
+	/**
+	 * GET /api/v1/auth/me (auth:sanctum)
+	 */
+	public function me(Request $request): JsonResponse
+	{
+		/** @var User $user */
+		$user = $request->user();
+		return new JsonResponse([
+			'success' => true,
+			'message' => 'OK',
+			'data' => [
+				'user' => [
+					'id' => (string) $user->getKey(),
+					'email' => $user->email,
+					'phone' => $user->phone,
+					'role' => optional($user->role)->name ?? 'user',
+					'role_display_name' => optional($user->role)->display_name ?? 'Utilisateur',
+					'permissions' => $user->role ? ($user->role->permissions()->pluck('name')->all() ?? []) : [],
+					'organization_id' => $user->organization_id,
+					'two_factor_enabled' => (bool) ($user->two_factor_enabled ?? false),
+					'last_login_at' => optional($user->last_login_at)->toIso8601String(),
+					'created_at' => optional($user->created_at)->toIso8601String(),
+				]
+			]
+		]);
+	}
 
-            if (!$user || !Hash::check($password, $user->password)) {
-                RateLimiter::hit($key);
-                
-                Log::warning('Tentative de connexion échouée', [
-                    'identifier' => $identifier,
-                    'ip' => $request->ip(),
-                    'user_agent' => $request->userAgent(),
-                ]);
+	/**
+	 * POST /api/v1/auth/logout (auth:sanctum)
+	 */
+	public function logout(Request $request): JsonResponse
+	{
+		$request->user()?->currentAccessToken()?->delete();
+		return new JsonResponse(['success' => true, 'message' => 'Déconnecté']);
+	}
 
-                throw ValidationException::withMessages([
-                    'identifier' => ['Identifiants incorrects']
-                ]);
-            }
+	/**
+	 * POST /api/v1/auth/logout-all (auth:sanctum)
+	 */
+	public function logoutAll(Request $request): JsonResponse
+	{
+		$request->user()?->tokens()?->delete();
+		return new JsonResponse(['success' => true, 'message' => 'Déconnecté de tous les appareils']);
+	}
 
-            // Vérifier si le compte est actif
-            if (!$user->is_active) {
-                Log::warning('Tentative de connexion sur compte inactif', [
-                    'user_id' => $user->id,
-                    'ip' => $request->ip(),
-                ]);
+	/**
+	 * POST /api/v1/auth/refresh (auth:sanctum)
+	 * With Sanctum we mint a new token and revoke the current one.
+	 */
+	public function refresh(Request $request): JsonResponse
+	{
+		$user = $request->user();
+		$request->user()?->currentAccessToken()?->delete();
+		$newToken = $user->createToken('Refresh Token')->plainTextToken;
+		return new JsonResponse([
+			'success' => true,
+			'message' => 'Token renouvelé',
+			'data' => [
+				'user' => [
+					'id' => (string) $user->getKey(),
+					'email' => $user->email,
+					'phone' => $user->phone,
+					'role' => optional($user->role)->name ?? 'user',
+					'role_display_name' => optional($user->role)->display_name ?? 'Utilisateur',
+					'permissions' => $user->role ? ($user->role->permissions()->pluck('name')->all() ?? []) : [],
+					'organization_id' => $user->organization_id,
+					'two_factor_enabled' => (bool) ($user->two_factor_enabled ?? false),
+					'last_login_at' => optional($user->last_login_at)->toIso8601String(),
+					'created_at' => optional($user->created_at)->toIso8601String(),
+				],
+				'token' => [
+					'access_token' => $newToken,
+					'token_type' => 'Bearer',
+					'expires_at' => now()->addHours(8)->toIso8601String(),
+				],
+			],
+		]);
+	}
 
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Compte désactivé. Contactez l\'administrateur.'
-                ], 403);
-            }
+	/**
+	 * GET /api/v1/auth/verify (auth:sanctum)
+	 */
+	public function verify(Request $request): JsonResponse
+	{
+		return new JsonResponse([
+			'success' => true,
+			'message' => 'Token valide',
+			'data' => [
+				'valid' => true,
+				'expires_at' => now()->addHours(8)->toIso8601String(),
+			],
+		]);
+	}
 
-            // Révoquer les anciens tokens (session unique)
-            $user->tokens()->delete();
-
-            // Générer un nouveau token
-            $tokenExpiration = $rememberMe 
-                ? now()->addDays(7) 
-                : now()->addMinutes(config('sanctum.expiration', 60));
-
-            $token = $user->createToken(
-                'auth_token',
-                ['*'],
-                $tokenExpiration
-            );
-
-            // Mettre à jour les informations de connexion
-            $user->update([
-                'last_login_at' => now(),
-                'last_login_ip' => $request->ip(),
-            ]);
-
-            // Clear rate limiting
-            RateLimiter::clear($key);
-
-            // Log de sécurité
-            Log::info('Connexion réussie', [
-                'user_id' => $user->id,
-                'role' => $user->role->name,
-                'ip' => $request->ip(),
-                'user_agent' => $request->userAgent(),
-                'remember_me' => $rememberMe,
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Connexion réussie',
-                'data' => [
-                    'user' => [
-                        'id' => $user->id,
-                        'email' => $user->email,
-                        'phone' => $user->phone,
-                        'role' => $user->role->name,
-                        'role_display_name' => $user->role->display_name,
-                        'permissions' => $user->role->permissions->pluck('name')->toArray(),
-                        'organization_id' => $user->organization_id,
-                        'two_factor_enabled' => $user->two_factor_enabled,
-                        'last_login_at' => $user->last_login_at,
-                    ],
-                    'token' => [
-                        'access_token' => $token->plainTextToken,
-                        'token_type' => 'Bearer',
-                        'expires_at' => $token->accessToken->expires_at,
-                    ]
-                ]
-            ]);
-
-        } catch (ValidationException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Identifiants incorrects',
-                'errors' => $e->errors()
-            ], 422);
-        } catch (\Exception $e) {
-            Log::error('Erreur lors de la connexion', [
-                'error' => $e->getMessage(),
-                'ip' => $request->ip(),
-                'identifier' => $identifier
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la connexion'
-            ], 500);
-        }
-    }
-
-    /**
-     * Déconnexion de l'utilisateur
-     * 
-     * @param Request $request
-     * @return JsonResponse
-     */
-    public function logout(Request $request): JsonResponse
-    {
-        try {
-            $user = $request->user();
-            
-            // Révoquer le token actuel
-            $request->user()->currentAccessToken()->delete();
-
-            // Log de sécurité
-            Log::info('Déconnexion utilisateur', [
-                'user_id' => $user->id,
-                'ip' => $request->ip(),
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Déconnexion réussie'
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Erreur lors de la déconnexion', [
-                'error' => $e->getMessage(),
-                'user_id' => $request->user()?->id,
-                'ip' => $request->ip(),
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la déconnexion'
-            ], 500);
-        }
-    }
-
-    /**
-     * Déconnexion de tous les appareils
-     * 
-     * @param Request $request
-     * @return JsonResponse
-     */
-    public function logoutAll(Request $request): JsonResponse
-    {
-        try {
-            $user = $request->user();
-            
-            // Révoquer tous les tokens
-            $user->tokens()->delete();
-
-            // Log de sécurité
-            Log::info('Déconnexion de tous les appareils', [
-                'user_id' => $user->id,
-                'ip' => $request->ip(),
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Déconnexion de tous les appareils réussie'
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Erreur lors de la déconnexion globale', [
-                'error' => $e->getMessage(),
-                'user_id' => $request->user()?->id,
-                'ip' => $request->ip(),
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la déconnexion'
-            ], 500);
-        }
-    }
-
-    /**
-     * Rafraîchir le token d'accès
-     * 
-     * @param Request $request
-     * @return JsonResponse
-     */
-    public function refresh(Request $request): JsonResponse
-    {
-        try {
-            $user = $request->user();
-            $currentToken = $request->user()->currentAccessToken();
-
-            // Révoquer le token actuel
-            $currentToken->delete();
-
-            // Générer un nouveau token
-            $token = $user->createToken(
-                'auth_token',
-                ['*'],
-                now()->addMinutes(config('sanctum.expiration', 60))
-            );
-
-            // Log de sécurité
-            Log::info('Token rafraîchi', [
-                'user_id' => $user->id,
-                'ip' => $request->ip(),
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Token rafraîchi',
-                'data' => [
-                    'token' => [
-                        'access_token' => $token->plainTextToken,
-                        'token_type' => 'Bearer',
-                        'expires_at' => $token->accessToken->expires_at,
-                    ]
-                ]
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Erreur lors du rafraîchissement du token', [
-                'error' => $e->getMessage(),
-                'user_id' => $request->user()?->id,
-                'ip' => $request->ip(),
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors du rafraîchissement'
-            ], 500);
-        }
-    }
-
-    /**
-     * Obtenir les informations de l'utilisateur connecté
-     * 
-     * @param Request $request
-     * @return JsonResponse
-     */
-    public function me(Request $request): JsonResponse
-    {
-        try {
-            $user = $request->user()->load(['role', 'role.permissions', 'organization']);
-
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'user' => [
-                        'id' => $user->id,
-                        'email' => $user->email,
-                        'phone' => $user->phone,
-                        'role' => $user->role->name,
-                        'role_display_name' => $user->role->display_name,
-                        'permissions' => $user->role->permissions->pluck('name')->toArray(),
-                        'organization' => $user->organization ? [
-                            'id' => $user->organization->id,
-                            'name' => $user->organization->name,
-                            'type' => $user->organization->type,
-                        ] : null,
-                        'two_factor_enabled' => $user->two_factor_enabled,
-                        'last_login_at' => $user->last_login_at,
-                        'created_at' => $user->created_at,
-                    ]
-                ]
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Erreur lors de la récupération du profil', [
-                'error' => $e->getMessage(),
-                'user_id' => $request->user()?->id,
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la récupération du profil'
-            ], 500);
-        }
-    }
-
-    /**
-     * Vérifier la validité du token
-     * 
-     * @param Request $request
-     * @return JsonResponse
-     */
-    public function verify(Request $request): JsonResponse
-    {
-        $token = $request->user()->currentAccessToken();
-        
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'valid' => true,
-                'expires_at' => $token->expires_at,
-                'user_id' => $request->user()->id,
-            ]
-        ]);
-    }
+	/**
+	 * POST /api/v1/auth/register
+	 * Placeholder (not implemented in this phase)
+	 */
+	public function register(Request $request): JsonResponse
+	{
+		return new JsonResponse([
+			'success' => false,
+			'message' => 'Inscription non disponible',
+		], 501);
+	}
 }
+

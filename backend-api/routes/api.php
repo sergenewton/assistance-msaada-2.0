@@ -30,7 +30,10 @@ Route::prefix('v1')->group(function () {
     }
 
     // Include (optional) auth routes if present
-    $authRoutes = __DIR__ . '/v1/auth.php';
+    $authRoutes = __DIR__ . '/api/v1/auth.php';
+    if (!file_exists($authRoutes)) {
+        $authRoutes = __DIR__ . '/v1/auth.php';
+    }
     if (file_exists($authRoutes)) {
         require_once $authRoutes;
     }
@@ -43,6 +46,8 @@ Route::prefix('v1')->group(function () {
     if (file_exists($reportsRoutes)) {
         require_once $reportsRoutes;
     }
+
+    // Debug endpoints removed after validation
 });
 
 // Global health check (without version)
