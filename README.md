@@ -158,7 +158,7 @@ Variantes utiles
 
 Notes
 - Le script vérifie les prérequis (Docker pour `--db-docker`, client MySQL et port 3306 pour `--db-local`).
-- Le backend est servi sur 127.0.0.1:8000 (Laravel), le frontend sur 127.0.0.1:5173 (Vite).
+- Le backend est servi sur 127.0.0.1:8000 (Laravel), le frontend sur 127.0.0.1:3000 (Vite).
 - Les logs sont dans `logs/`. Les PIDs dans `.run/`.
 - `quick-start-local.sh` est déprécié et redirige automatiquement vers ce nouveau script.
 

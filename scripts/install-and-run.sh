@@ -154,11 +154,11 @@ start_frontend() {
     info "Frontend already running (pid $(cat "$FRONTEND_PID"))"
     return 0
   fi
-  info "Starting frontend (Vite dev server on :5173)"
+  info "Starting frontend (Vite dev server on :3000)"
   nohup npm run dev >>"$FRONTEND_LOG" 2>&1 &
   echo $! > "$FRONTEND_PID"
   # Vite sometimes needs a few seconds to boot
-  wait_for_port 127.0.0.1 5173 "Frontend" 60 1 || warn "Frontend port 5173 not ready yet; it may still be warming up."
+  wait_for_port 127.0.0.1 3000 "Frontend" 60 1 || warn "Frontend port 3000 not ready yet; it may still be warming up."
 }
 
 start_db_docker() {
@@ -199,7 +199,7 @@ status_all() {
   [[ "$code" == "200" ]] && echo "Backend health: OK" || echo "Backend health: $code"
   # Frontend
   if pid_is_running "$FRONTEND_PID"; then echo "Frontend: RUNNING (pid $(cat "$FRONTEND_PID"))"; else echo "Frontend: STOPPED"; fi
-  if is_port_open 127.0.0.1 5173; then echo "Frontend port 5173: OPEN"; else echo "Frontend port 5173: CLOSED"; fi
+  if is_port_open 127.0.0.1 3000; then echo "Frontend port 3000: OPEN"; else echo "Frontend port 3000: CLOSED"; fi
 }
 
 stop_all() {
