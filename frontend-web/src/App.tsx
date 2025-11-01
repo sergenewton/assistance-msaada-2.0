@@ -10,7 +10,6 @@ import { RoleDashboard, RoleProtectedRoute } from '@/pages/Dashboard/RoleDashboa
 // Admin pages
 import { UsersListPage } from '@/pages/Admin/UsersListPage';
 import { RolesPermissionsPage } from '@/pages/Admin/RolesPermissionsPage';
-import TestRoutePage from '@/pages/TestRoutePage';
 import { APSDashboard } from '@/pages/Dashboard/APSDashboard';
 import { OperatorDashboard } from '@/pages/Dashboard/OperatorDashboard';
 import { OrganizationDashboard } from '@/pages/Dashboard/OrganizationDashboard';
@@ -180,12 +179,6 @@ function App() {
               <RolesPermissionsPage />
             </RoleProtectedRoute>
           }
-        />
-        
-        {/* Test route */}
-        <Route
-          path="/test-route-ok"
-          element={<TestRoutePage />}
         />
         
         <Route 
