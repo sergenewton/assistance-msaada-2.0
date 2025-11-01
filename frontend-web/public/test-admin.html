@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Admin Routes</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f3f4f6;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #111827;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #6b7280;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f9fafb;
+            border-radius: 8px;
+            border-left: 4px solid #10b981;
+        }
+        .test-section h2 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #111827;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #10b981;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            margin: 5px;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+        .button:hover {
+            background: #059669;
+        }
+        .button-secondary {
+            background: #6b7280;
+        }
+        .button-secondary:hover {
+            background: #4b5563;
+        }
+        .info {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            color: #1e40af;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #1f2937;
+            color: #f3f4f6;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .status { font-weight: bold; }
+        .status.ok { color: #10b981; }
+        .status.error { color: #ef4444; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test des Routes Admin</h1>
+        <p class="subtitle">Diagnostic des pages /admin/users/*</p>
+
+        <div class="test-section">
+            <h2>1. Test de Navigation Directe</h2>
+            <p>Cliquez sur ces liens pour tester si les routes React Router fonctionnent :</p>
+            <div style="margin-top: 15px;">
+                <a href="/admin/users/list" class="button">📋 Liste des utilisateurs</a>
+                <a href="/admin/users/roles" class="button">🔐 Rôles et permissions</a>
+                <a href="/dashboard/admin" class="button">🏠 Dashboard Admin</a>
+            </div>
+            <div class="info">
+                ℹ️ Si vous voyez "404 Page non trouvée", le problème vient du routing React.
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>2. Vérification de l'Authentification</h2>
+            <button class="button" onclick="checkAuth()">🔍 Vérifier l'Auth</button>
+            <div id="auth-result" class="result" style="display:none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>3. Test API Backend</h2>
+            <button class="button" onclick="testBackend()">🔌 Tester /api/v1/auth/me</button>
+            <div id="api-result" class="result" style="display:none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>4. Vérification des Composants</h2>
+            <button class="button" onclick="checkComponents()">📦 Vérifier les imports</button>
+            <div id="components-result" class="result" style="display:none;"></div>
+        </div>
+
+        <div style="margin-top: 30px;">
+            <a href="/" class="button button-secondary">← Retour à l'app</a>
+            <a href="/debug-auth.html" class="button button-secondary">🔍 Debug Auth</a>
+        </div>
+    </div>
+
+    <script>
+        function checkAuth() {
+            const resultDiv = document.getElementById('auth-result');
+            resultDiv.style.display = 'block';
+            
+            try {
+                const authData = localStorage.getItem('assistance-msaada-auth');
+                if (!authData) {
+                    resultDiv.innerHTML = '<span class="status error">❌ NON CONNECTÉ</span>\n\nAucune donnée d\'authentification trouvée.\nVeuillez vous connecter d\'abord sur /login';
+                    return;
+                }
+                
+                const parsed = JSON.parse(authData);
+                const user = parsed.state?.user || parsed.user;
+                const isAuth = parsed.state?.isAuthenticated || parsed.isAuthenticated;
+                
+                let result = '<span class="status ok">✓ CONNECTÉ</span>\n\n';
+                result += `Rôle: ${user?.role || 'N/A'}\n`;
+                result += `Email: ${user?.email || 'N/A'}\n`;
+                result += `isAuthenticated: ${isAuth}\n`;
+                result += `\nDonnées complètes:\n${JSON.stringify(parsed, null, 2)}`;
+                
+                resultDiv.innerHTML = result;
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="status error">❌ ERREUR</span>\n\n${error.message}`;
+            }
+        }
+
+        async function testBackend() {
+            const resultDiv = document.getElementById('api-result');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '⏳ Test en cours...';
+            
+            try {
+                const authData = localStorage.getItem('assistance-msaada-auth');
+                if (!authData) {
+                    resultDiv.innerHTML = '<span class="status error">❌ Pas de token</span>\n\nConnectez-vous d\'abord.';
+                    return;
+                }
+                
+                const parsed = JSON.parse(authData);
+                const token = parsed.state?.token?.access_token || parsed.token?.access_token;
+                
+                if (!token) {
+                    resultDiv.innerHTML = '<span class="status error">❌ Token manquant</span>';
+                    return;
+                }
+                
+                const response = await fetch('http://localhost:8000/api/v1/auth/me', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `<span class="status ok">✓ API OK (${response.status})</span>\n\nRéponse:\n${JSON.stringify(data, null, 2)}`;
+                } else {
+                    resultDiv.innerHTML = `<span class="status error">❌ API ERROR (${response.status})</span>\n\n${JSON.stringify(data, null, 2)}`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="status error">❌ ERREUR RÉSEAU</span>\n\n${error.message}`;
+            }
+        }
+
+        async function checkComponents() {
+            const resultDiv = document.getElementById('components-result');
+            resultDiv.style.display = 'block';
+            
+            let result = '📦 Vérification des routes React Router:\n\n';
+            
+            // Essayer de charger le main bundle pour voir s'il contient les routes
+            try {
+                const response = await fetch('/src/App.tsx');
+                const text = await response.text();
+                
+                const hasUsersList = text.includes('/admin/users/list');
+                const hasUsersRoles = text.includes('/admin/users/roles');
+                const hasImportUsersList = text.includes('UsersListPage');
+                const hasImportUsersRoles = text.includes('RolesPermissionsPage');
+                
+                result += `Route /admin/users/list définie: ${hasUsersList ? '✅' : '❌'}\n`;
+                result += `Route /admin/users/roles définie: ${hasUsersRoles ? '✅' : '❌'}\n`;
+                result += `Import UsersListPage: ${hasImportUsersList ? '✅' : '❌'}\n`;
+                result += `Import RolesPermissionsPage: ${hasImportUsersRoles ? '✅' : '❌'}\n`;
+                
+                if (hasUsersList && hasUsersRoles && hasImportUsersList && hasImportUsersRoles) {
+                    result += '\n<span class="status ok">✓ Toutes les routes sont présentes dans le code source</span>\n';
+                    result += '\n💡 Si vous voyez toujours 404, le problème vient du cache navigateur.';
+                    result += '\n\nSolution: Ouvrez la DevTools (F12) → onglet Application → Storage';
+                    result += '\n→ Clic droit sur le domaine → Clear site data';
+                } else {
+                    result += '\n<span class="status error">❌ Routes manquantes dans le code source</span>';
+                }
+                
+            } catch (error) {
+                result += `\n<span class="status error">❌ Impossible de vérifier: ${error.message}</span>`;
+            }
+            
+            resultDiv.innerHTML = result;
+        }
+    </script>
+</body>
+</html>

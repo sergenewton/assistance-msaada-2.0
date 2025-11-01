@@ -119,6 +119,15 @@ export const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
 }) => {
   const { user, isAuthenticated, isLoading } = useAuth();
 
+  // Debug logs
+  console.log('[RoleProtectedRoute] Check:', {
+    isLoading,
+    isAuthenticated,
+    userRole: user?.role,
+    allowedRoles,
+    user: user ? { id: user.id, role: user.role } : null
+  });
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -128,17 +137,43 @@ export const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
   }
 
   if (!isAuthenticated || !user) {
-    window.location.href = '/login';
-    return null;
+    console.log('[RoleProtectedRoute] Not authenticated, redirecting to /login');
+    return (
+      <div className="min-h-screen bg-red-50 flex items-center justify-center p-4">
+        <div className="bg-white p-8 rounded-lg shadow-lg max-w-md">
+          <h2 className="text-2xl font-bold text-red-600 mb-4">🔒 Non Authentifié</h2>
+          <p className="text-gray-700 mb-4">Vous devez être connecté pour accéder à cette page.</p>
+          <p className="text-sm text-gray-600 mb-4">isAuthenticated: {String(isAuthenticated)}, user: {user ? 'présent' : 'null'}</p>
+          <a href="/login" className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">
+            Se connecter
+          </a>
+        </div>
+      </div>
+    );
   }
 
   const userRole = user.role as UserRole;
   
   // Vérifier si l'utilisateur a le bon rôle
   if (!allowedRoles.includes(userRole)) {
-    window.location.href = fallbackRoute;
-    return null;
+    console.log('[RoleProtectedRoute] Role mismatch, redirecting to', fallbackRoute);
+    return (
+      <div className="min-h-screen bg-yellow-50 flex items-center justify-center p-4">
+        <div className="bg-white p-8 rounded-lg shadow-lg max-w-md">
+          <h2 className="text-2xl font-bold text-yellow-600 mb-4">⚠️ Accès Refusé</h2>
+          <p className="text-gray-700 mb-4">Votre rôle ne permet pas d'accéder à cette page.</p>
+          <div className="bg-gray-100 p-4 rounded mb-4 text-sm font-mono">
+            <p><strong>Votre rôle:</strong> {userRole}</p>
+            <p><strong>Rôles autorisés:</strong> {allowedRoles.join(', ')}</p>
+          </div>
+          <a href={fallbackRoute} className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">
+            Retour au tableau de bord
+          </a>
+        </div>
+      </div>
+    );
   }
 
+  console.log('[RoleProtectedRoute] Access granted!');
   return <>{children}</>;
 };
