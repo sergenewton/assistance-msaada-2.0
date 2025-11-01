@@ -1,11 +1,11 @@
-# 🚀 ASSISTANCE MSAADA 2.0 - Plateforme de Signalement VBG
+# 🚀 VBG Platform - Plateforme de Signalement VBG
 
 ## 📋 Vue d'ensemble
-Cette plateforme complète de signalement de Violence Basée sur le Genre (VBG) "ASSISTANCE MSAADA" est organisée en **monorepo** avec trois composants interconnectés :
+Cette plateforme complète de signalement de Violence Basée sur le Genre (VBG) est organisée en **monorepo** avec trois composants interconnectés :
 
-1. **Backend API** - Laravel 11 avec JWT Auth (`backend-api/`)
-2. **Frontend Web** - React 18+ avec TypeScript (`frontend-web/`)
-3. **Application Mobile** - Flutter 3.19+ avec Clean Architecture (`mobile-app/`)
+1. **Backend API** - Laravel 10+ avec JWT Auth (`apps/api/`)
+2. **Frontend Web** - React 18+ avec TypeScript (`apps/web/`)
+3. **Application Mobile** - Flutter avec Clean Architecture (`apps/mobile/`)
 
 ## 📁 Structure du Monorepo (Recommandée)
 
@@ -132,6 +132,35 @@ assistance-msaada-2/
 - **Tests** : Flutter Test + Mocktail
 
 ## Démarrage Rapide
+
+### Nouveau (recommandé): script unifié install & run
+
+Deux modes exclusifs, sans fallback implicite:
+
+Dockerisé SEULEMENT (échoue si Docker indisponible)
+```bash
+./scripts/install-and-run.sh --db-docker
+```
+
+Local SEULEMENT (échoue si MySQL local indisponible)
+```bash
+./scripts/install-and-run.sh --db-local
+```
+
+Variantes utiles
+```bash
+./scripts/install-and-run.sh --db-docker --status
+./scripts/install-and-run.sh --db-local --backend-only
+./scripts/install-and-run.sh --db-local --frontend-only
+./scripts/install-and-run.sh --db-docker --db-only
+./scripts/install-and-run.sh --stop
+```
+
+Notes
+- Le script vérifie les prérequis (Docker pour `--db-docker`, client MySQL et port 3306 pour `--db-local`).
+- Le backend est servi sur 127.0.0.1:8000 (Laravel), le frontend sur 127.0.0.1:5173 (Vite).
+- Les logs sont dans `logs/`. Les PIDs dans `.run/`.
+- `quick-start-local.sh` est déprécié et redirige automatiquement vers ce nouveau script.
 
 ### 1. Backend Laravel
 ```bash

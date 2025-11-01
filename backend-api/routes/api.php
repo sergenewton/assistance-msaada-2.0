@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('v1')->group(function () {
     // Health check endpoint
     Route::get('/health', function () {
-        return response()->json([
+        return new \Illuminate\Http\JsonResponse([
             'status' => 'ok',
             'timestamp' => now()->toISOString(),
             'service' => 'Assistance Msaada API',
@@ -47,7 +47,7 @@ Route::prefix('v1')->group(function () {
 
 // Global health check (without version)
 Route::get('/health', function () {
-    return response()->json([
+    return new \Illuminate\Http\JsonResponse([
         'status' => 'ok',
         'timestamp' => now()->toISOString(),
         'service' => 'Assistance Msaada API',

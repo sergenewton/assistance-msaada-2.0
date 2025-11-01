@@ -67,6 +67,30 @@ frontend-web/
 
 ## Installation
 
+### Démarrage local (recommandé)
+
+Depuis la racine du dépôt, utilisez le lanceur unifié pour démarrer l'API + Frontend + DB:
+
+Dockerisé SEULEMENT (échoue si Docker indisponible)
+```bash
+./scripts/install-and-run.sh --db-docker
+```
+
+Local SEULEMENT (échoue si MySQL local indisponible)
+```bash
+./scripts/install-and-run.sh --db-local
+```
+
+Variantes utiles
+```bash
+./scripts/install-and-run.sh --db-docker --status
+./scripts/install-and-run.sh --db-local --backend-only
+./scripts/install-and-run.sh --db-local --frontend-only
+./scripts/install-and-run.sh --db-docker --db-only
+./scripts/install-and-run.sh --stop
+```
+
+Vous pouvez toujours lancer uniquement le frontend depuis ce dossier:
 ```bash
 npm install
 npm run dev

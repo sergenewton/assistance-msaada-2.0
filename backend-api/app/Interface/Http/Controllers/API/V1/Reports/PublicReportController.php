@@ -5,6 +5,7 @@ namespace App\Interface\Http\Controllers\API\V1\Reports;
 use Illuminate\Routing\Controller as Controller;
 use App\Models\Report;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
@@ -25,7 +26,7 @@ class PublicReportController extends Controller
         ]);
 
         if ($v->fails()) {
-            return response()->json([
+            return new JsonResponse([
                 'success' => false,
                 'message' => 'Données invalides',
                 'errors' => $v->errors(),
@@ -80,7 +81,7 @@ class PublicReportController extends Controller
         $report->payload = $payload;
         $report->save();
 
-        return response()->json([
+        return new JsonResponse([
             'success' => true,
             'message' => 'Signalement reçu',
             'report_number' => $tracking,
@@ -88,7 +89,7 @@ class PublicReportController extends Controller
                 'id' => $report->id,
                 'created_at' => $report->created_at?->toISOString(),
             ],
-        ]);
+        ], 201);
     }
 
     /**
@@ -98,13 +99,13 @@ class PublicReportController extends Controller
     {
         $report = Report::query()->where('report_number', $tracking)->first();
         if (!$report) {
-            return response()->json([
+            return new JsonResponse([
                 'success' => false,
                 'message' => 'Signalement introuvable',
             ], 404);
         }
 
-        return response()->json([
+        return new JsonResponse([
             'success' => true,
             'data' => [
                 'report_number' => $report->report_number,

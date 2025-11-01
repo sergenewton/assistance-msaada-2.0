@@ -12,7 +12,7 @@ services:
       MYSQL_PASSWORD: vbgpass
       MYSQL_ROOT_HOST: "%"
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     command: --bind-address=0.0.0.0 --skip-host-cache --skip-name-resolve

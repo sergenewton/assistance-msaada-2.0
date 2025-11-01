@@ -85,19 +85,36 @@ php artisan serve
 php artisan test
 ```
 
-## Développement local (serveur mock)
+## Développement local (Laravel)
 
-Le script `quick-start-local.sh` démarre un serveur PHP intégré sur le port 8000 en utilisant un routeur léger `public/api-test.php`. Ce routeur mock propose des endpoints compatibles pour l'auth et les signalements sans passer par le Kernel Laravel, pratique pour les itérations rapides front-end.
+Recommandé: utilisez le lanceur unifié à la racine du dépôt pour installer et démarrer la stack (API + Front + DB) en un seul geste.
 
-Endpoints mock importants:
+Dockerisé SEULEMENT (échoue si Docker indisponible)
+```bash
+./scripts/install-and-run.sh --db-docker
+```
+
+Local SEULEMENT (échoue si MySQL local indisponible)
+```bash
+./scripts/install-and-run.sh --db-local
+```
+
+Variantes utiles
+```bash
+./scripts/install-and-run.sh --db-docker --status
+./scripts/install-and-run.sh --db-local --backend-only
+./scripts/install-and-run.sh --db-local --frontend-only
+./scripts/install-and-run.sh --db-docker --db-only
+./scripts/install-and-run.sh --stop
+```
+
+Endpoints utiles:
 - `GET /api/health`
 - `POST /api/v1/auth/login`
-- `GET /api/v1/auth/me`
-- `POST /api/v1/reports` (soumission publique)
+- `POST /api/v1/reports/submit` (soumission publique)
 - `GET /api/v1/reports/{tracking}` (consultation publique)
-- `GET /api/v1/reports/unprocessed` (opérateur – non traités)
-- `GET /api/v1/reports/unprocessed-urgent` (opérateur – non traités urgents)
 
-Remarques:
-- Ces endpoints mock lisent/écrivent dans un petit stockage fichier, avec support MySQL optionnel si la base est démarrée.
-- En mode local via ce routeur, les routes Laravel ajoutées dans `routes/api.php` ne sont pas utilisées. Pour tester les vraies routes Laravel, lancez l'API avec `php artisan serve` (ou via le conteneur) et utilisez `public/index.php` comme point d'entrée.
+Notes:
+- Le script de test `public/api-test.php` a été supprimé et ne doit plus être utilisé. Toutes les requêtes passent par Laravel et persistent en base MySQL (plus aucun stockage JSON).
+- `quick-start-local.sh` est déprécié et redirige vers `scripts/install-and-run.sh`.
+- Assurez-vous que MySQL est démarré (le script peut le lancer via Docker) avant d'exécuter les migrations.
