@@ -2,59 +2,197 @@
 
 namespace App\Http\Controllers\Api\Admin;
 
-use App\Models\Permission;
+use App\Http\Controllers\Controller;
 use App\Models\Role;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
-class RoleManagementController
+class RoleManagementController extends Controller
 {
-    public function roles(Request $request): JsonResponse
+    /**
+     * Liste tous les rôles
+     */
+    public function index(): JsonResponse
     {
-        $user = $request->user();
-        if (!$user || !$user->isAdmin()) {
-            return new JsonResponse(['success' => false, 'message' => 'Forbidden'], 403);
-        }
+        $roles = Role::where('is_active', true)
+            ->orderBy('name')
+            ->get();
 
-        $roles = Role::with('permissions')->get()->map(function ($r) {
+        $rolesData = $roles->map(function ($role) {
             return [
-                'id' => $r->id,
-                'name' => $r->name,
-                'display_name' => $r->display_name,
-                'permissions' => $r->permissions ? $r->permissions->pluck('name')->values()->all() : [],
+                'id' => $role->id,
+                'name' => $role->name,
+                'display_name' => $role->display_name,
+                'description' => $role->description,
+                'permissions' => $role->permissions ? json_decode($role->permissions, true) : [],
+                'is_active' => $role->is_active,
+                'created_at' => $role->created_at->toISOString(),
+                'updated_at' => $role->updated_at->toISOString(),
             ];
         });
 
-        return new JsonResponse(['success' => true, 'data' => ['roles' => $roles]]);
+        return response()->json([
+            'success' => true,
+            'data' => $rolesData,
+        ]);
     }
 
-    public function permissions(Request $request): JsonResponse
+    /**
+     * Affiche un rôle spécifique
+     */
+    public function show(string $id): JsonResponse
     {
-        $user = $request->user();
-        if (!$user || !$user->isAdmin()) {
-            return new JsonResponse(['success' => false, 'message' => 'Forbidden'], 403);
+        $role = Role::find($id);
+
+        if (!$role) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Rôle non trouvé',
+            ], 404);
         }
 
-        $permissions = Permission::query()->orderBy('name')->get(['id', 'name', 'description']);
-        return new JsonResponse(['success' => true, 'data' => ['permissions' => $permissions]]);
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'id' => $role->id,
+                'name' => $role->name,
+                'display_name' => $role->display_name,
+                'description' => $role->description,
+                'permissions' => $role->permissions ? json_decode($role->permissions, true) : [],
+                'is_active' => $role->is_active,
+                'created_at' => $role->created_at->toISOString(),
+                'updated_at' => $role->updated_at->toISOString(),
+            ],
+        ]);
     }
 
-    public function syncRolePermissions(Role $role, Request $request): JsonResponse
+    /**
+     * Crée un nouveau rôle
+     */
+    public function store(Request $request): JsonResponse
     {
-        $user = $request->user();
-        if (!$user || !$user->isAdmin()) {
-            return new JsonResponse(['success' => false, 'message' => 'Forbidden'], 403);
-        }
-
-        $data = $request->validate([
-            'permissions' => 'required|array',
-            'permissions.*' => 'string|exists:permissions,name',
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|unique:roles,name|max:50',
+            'display_name' => 'required|string|max:100',
+            'description' => 'nullable|string',
+            'permissions' => 'nullable|array',
         ]);
 
-        // Convert permission names to IDs
-        $permissionIds = Permission::whereIn('name', $data['permissions'])->pluck('id');
-        $role->permissions()->sync($permissionIds);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation échouée',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
 
-        return new JsonResponse(['success' => true, 'message' => 'Permissions mises à jour']);
+        $role = Role::create([
+            'name' => $request->input('name'),
+            'display_name' => $request->input('display_name'),
+            'description' => $request->input('description'),
+            'permissions' => $request->input('permissions') ? json_encode($request->input('permissions')) : null,
+            'is_active' => true,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Rôle créé avec succès',
+            'data' => [
+                'id' => $role->id,
+                'name' => $role->name,
+                'display_name' => $role->display_name,
+            ],
+        ], 201);
+    }
+
+    /**
+     * Met à jour un rôle
+     */
+    public function update(Request $request, string $id): JsonResponse
+    {
+        $role = Role::find($id);
+
+        if (!$role) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Rôle non trouvé',
+            ], 404);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'name' => 'string|unique:roles,name,' . $id . '|max:50',
+            'display_name' => 'string|max:100',
+            'description' => 'nullable|string',
+            'permissions' => 'nullable|array',
+            'is_active' => 'boolean',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation échouée',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        if ($request->has('name')) {
+            $role->name = $request->input('name');
+        }
+        if ($request->has('display_name')) {
+            $role->display_name = $request->input('display_name');
+        }
+        if ($request->has('description')) {
+            $role->description = $request->input('description');
+        }
+        if ($request->has('permissions')) {
+            $role->permissions = $request->input('permissions') ? json_encode($request->input('permissions')) : null;
+        }
+        if ($request->has('is_active')) {
+            $role->is_active = $request->input('is_active');
+        }
+
+        $role->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Rôle mis à jour avec succès',
+            'data' => [
+                'id' => $role->id,
+                'name' => $role->name,
+                'display_name' => $role->display_name,
+            ],
+        ]);
+    }
+
+    /**
+     * Supprime un rôle
+     */
+    public function destroy(string $id): JsonResponse
+    {
+        $role = Role::find($id);
+
+        if (!$role) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Rôle non trouvé',
+            ], 404);
+        }
+
+        // Vérifier qu'aucun utilisateur n'utilise ce rôle
+        $usersCount = $role->users()->count();
+        if ($usersCount > 0) {
+            return response()->json([
+                'success' => false,
+                'message' => "Impossible de supprimer ce rôle car {$usersCount} utilisateur(s) l'utilisent encore",
+            ], 400);
+        }
+
+        $role->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Rôle supprimé avec succès',
+        ]);
     }
 }
