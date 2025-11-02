@@ -2,6 +2,9 @@ import { useAuthStore } from '@/store/authStore';
 
 export interface User {
   id: string;
+  first_name: string | null;
+  last_name: string | null;
+  full_name: string;
   email: string;
   phone: string | null;
   role: string;

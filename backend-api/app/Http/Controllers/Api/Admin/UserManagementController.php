@@ -56,6 +56,9 @@ class UserManagementController extends Controller
         $users->getCollection()->transform(function ($user) {
             return [
                 'id' => $user->id,
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
+                'full_name' => $user->full_name,
                 'email' => $user->email,
                 'phone' => $user->phone,
                 'role' => $user->role ? $user->role->name : null,
@@ -94,6 +97,9 @@ class UserManagementController extends Controller
             'success' => true,
             'data' => [
                 'id' => $user->id,
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
+                'full_name' => $user->full_name,
                 'email' => $user->email,
                 'phone' => $user->phone,
                 'role' => $user->role ? $user->role->name : null,
@@ -115,6 +121,8 @@ class UserManagementController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
+            'first_name' => 'nullable|string|max:100',
+            'last_name' => 'nullable|string|max:100',
             'email' => 'required|email|unique:users,email',
             'phone' => 'nullable|string',
             'password' => 'required|string|min:8',
@@ -132,6 +140,8 @@ class UserManagementController extends Controller
         }
 
         $user = User::create([
+            'first_name' => $request->input('first_name'),
+            'last_name' => $request->input('last_name'),
             'email' => $request->input('email'),
             'phone' => $request->input('phone'),
             'password' => Hash::make($request->input('password')),
@@ -167,6 +177,8 @@ class UserManagementController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
+            'first_name' => 'nullable|string|max:100',
+            'last_name' => 'nullable|string|max:100',
             'email' => 'email|unique:users,email,' . $id,
             'phone' => 'nullable|string',
             'password' => 'nullable|string|min:8',
@@ -185,6 +197,12 @@ class UserManagementController extends Controller
         }
 
         // Mise à jour des champs
+        if ($request->has('first_name')) {
+            $user->first_name = $request->input('first_name');
+        }
+        if ($request->has('last_name')) {
+            $user->last_name = $request->input('last_name');
+        }
         if ($request->has('email')) {
             $user->email = $request->input('email');
         }

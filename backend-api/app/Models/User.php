@@ -29,6 +29,8 @@ class User extends Authenticatable
      * The attributes that are mass assignable.
      */
     protected $fillable = [
+        'first_name',
+        'last_name',
         'email',
         'phone',
         'password',
@@ -262,5 +264,16 @@ class User extends Authenticatable
     public function getTwoFactorSecretAttribute()
     {
         return $this->getEncryptedAttribute('two_factor_secret');
+    }
+
+    /**
+     * Accessor pour obtenir le nom complet
+     */
+    public function getFullNameAttribute()
+    {
+        if ($this->first_name || $this->last_name) {
+            return trim("{$this->first_name} {$this->last_name}");
+        }
+        return $this->email ? explode('@', $this->email)[0] : 'Utilisateur';
     }
 }

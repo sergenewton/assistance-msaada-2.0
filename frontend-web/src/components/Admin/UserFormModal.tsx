@@ -26,6 +26,8 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [roles, setRoles] = useState<Role[]>([]);
   const [formData, setFormData] = useState({
+    first_name: '',
+    last_name: '',
     email: '',
     phone: '',
     password: '',
@@ -64,6 +66,8 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
       const response = await adminApiService.getUser(id);
       if (response.success && response.data) {
         setFormData({
+          first_name: response.data.first_name || '',
+          last_name: response.data.last_name || '',
           email: response.data.email || '',
           phone: response.data.phone || '',
           password: '',
@@ -81,6 +85,8 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
 
   const resetForm = () => {
     setFormData({
+      first_name: '',
+      last_name: '',
       email: '',
       phone: '',
       password: '',
@@ -128,6 +134,8 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
     setLoading(true);
     try {
       const userData: any = {
+        first_name: formData.first_name || undefined,
+        last_name: formData.last_name || undefined,
         email: formData.email,
         phone: formData.phone || undefined,
         role_id: formData.role_id,
@@ -183,6 +191,36 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
               {errors.general}
             </div>
           )}
+
+          {/* First Name */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Prénom
+            </label>
+            <input
+              type="text"
+              value={formData.first_name}
+              onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              disabled={loading}
+              placeholder="Prénom de l'utilisateur"
+            />
+          </div>
+
+          {/* Last Name */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Nom
+            </label>
+            <input
+              type="text"
+              value={formData.last_name}
+              onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              disabled={loading}
+              placeholder="Nom de famille"
+            />
+          </div>
 
           {/* Email */}
           <div>
