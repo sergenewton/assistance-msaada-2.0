@@ -278,7 +278,7 @@ export const UsersListPage: React.FC = () => {
           
           {!loading && !error && (
             <div className="overflow-x-auto">
-              <table className="w-full table-auto">
+              <table className="w-full min-w-[1000px] table-auto">
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">NOM</th>

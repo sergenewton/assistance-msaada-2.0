@@ -101,22 +101,22 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       
       switch (userRole) {
         case 'survivante':
-          navigate('/survivor/dashboard');
+          navigate('/dashboard');
           break;
         case 'aps':
-          navigate('/aps/dashboard');
+          navigate('/dashboard');
           break;
         case 'operateur':
-          navigate('/operator/dashboard');
+          navigate('/dashboard');
           break;
         case 'organisation':
-          navigate('/organization/dashboard');
+          navigate('/dashboard');
           break;
         case 'superviseur':
-          navigate('/supervisor/dashboard');
+          navigate('/dashboard');
           break;
         case 'admin':
-          navigate('/dashboard/admin');
+          navigate('/admin');
           break;
         default:
           navigate('/dashboard');
