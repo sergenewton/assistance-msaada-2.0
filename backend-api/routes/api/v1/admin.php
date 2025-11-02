@@ -1,16 +1,35 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\Admin\UserManagementController;
 use App\Http\Controllers\Api\Admin\RoleManagementController;
+use App\Http\Controllers\Api\Admin\UserManagementController;
+use Illuminate\Support\Facades\Route;
 
-Route::prefix('admin')->middleware(['auth:api'])->group(function () {
-    // Users management
-    Route::get('/users', [UserManagementController::class, 'index']);
-    Route::patch('/users/{id}', [UserManagementController::class, 'update']);
+/*
+|--------------------------------------------------------------------------
+| Admin API Routes
+|--------------------------------------------------------------------------
+| Routes protégées pour les administrateurs
+*/
 
-    // Roles & permissions
-    Route::get('/roles', [RoleManagementController::class, 'roles']);
-    Route::get('/permissions', [RoleManagementController::class, 'permissions']);
-    Route::post('/roles/{role}/permissions', [RoleManagementController::class, 'syncRolePermissions']);
+Route::middleware(['auth:sanctum', 'admin'])->group(function () {
+    
+    // User Management
+    Route::prefix('users')->group(function () {
+        Route::get('/', [UserManagementController::class, 'index']);
+        Route::get('/{id}', [UserManagementController::class, 'show']);
+        Route::post('/', [UserManagementController::class, 'store']);
+        Route::put('/{id}', [UserManagementController::class, 'update']);
+        Route::delete('/{id}', [UserManagementController::class, 'destroy']);
+        Route::post('/{id}/restore', [UserManagementController::class, 'restore']);
+        Route::post('/{id}/toggle-active', [UserManagementController::class, 'toggleActive']);
+    });
+
+    // Role Management
+    Route::prefix('roles')->group(function () {
+        Route::get('/', [RoleManagementController::class, 'index']);
+        Route::get('/{id}', [RoleManagementController::class, 'show']);
+        Route::post('/', [RoleManagementController::class, 'store']);
+        Route::put('/{id}', [RoleManagementController::class, 'update']);
+        Route::delete('/{id}', [RoleManagementController::class, 'destroy']);
+    });
 });

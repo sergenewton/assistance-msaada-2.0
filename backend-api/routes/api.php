@@ -47,6 +47,14 @@ Route::prefix('v1')->group(function () {
         require_once $reportsRoutes;
     }
 
+    // Include admin routes
+    $adminRoutes = __DIR__ . '/api/v1/admin.php';
+    if (file_exists($adminRoutes)) {
+        Route::prefix('admin')->group(function () use ($adminRoutes) {
+            require $adminRoutes;
+        });
+    }
+
     // Debug endpoints removed after validation
 });
 
