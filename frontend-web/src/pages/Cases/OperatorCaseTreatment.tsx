@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { DashboardLayout } from '@/components/Layout/DashboardLayout';
 import { OperatorNavigation } from '@/pages/Dashboard/OperatorDashboard';
@@ -9,27 +9,42 @@ import Step2AssignAPS from '@/components/Cases/Treatment/Step2AssignAPS';
 import Step3Referrals from '@/components/Cases/Treatment/Step3Referrals';
 import Step4Validation from '@/components/Cases/Treatment/Step4Validation';
 import { APSProfile, CaseDetail, TreatmentState } from '@/types/cases';
+import { casesService } from '@/services/casesService';
 
 const OperatorCaseTreatment: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  // Mock case data (to be replaced with API fetch)
-  const caseData: CaseDetail = useMemo(() => ({
-    id: id || 'unknown',
-    trackingNumber: id || 'N/A',
-    createdAt: new Date().toISOString(),
-    elapsedMinutes: 42,
-    autoUrgencyScore: 68,
-    urgency: 'high',
-    violenceType: 'physical',
-    victim: { ageRange: '18-24', gender: 'f', province: 'Kinshasa', commune: 'Gombe', quartier: 'Quartier 1' },
-    incident: { place: 'domicile', narrativeEncrypted: true },
-    location: { address: 'Av. Exemple 123, Kinshasa', latitude: -4.32, longitude: 15.31 },
-    attachments: { photos: [], audio: [] },
-    dangerIndicators: { safeNow: false, urgentCareNeeded: true, childrenAtRisk: false, recentDeathThreats: false, perpetratorHasHomeAccess: true },
-    needs: { psycho: true, medical: true, legal: false, shelter: false, economic: false, police: true },
-  }), [id]);
+  // Chargement du dossier réel depuis l'API
+  const [caseData, setCaseData] = useState<CaseDetail | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    async function load() {
+      if (!id) return;
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await casesService.getCaseDetail(id);
+        if (!mounted) return;
+        setCaseData(data);
+        // Adapter l'état par défaut en fonction du dossier
+        setState((prev) => ({
+          ...prev,
+          evaluation: { ...prev.evaluation, confirmedUrgency: data.urgency },
+        }));
+      } catch (e: any) {
+        if (!mounted) return;
+        setError(e?.message || 'Erreur lors du chargement du dossier');
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
+    load();
+    return () => { mounted = false; };
+  }, [id]);
 
   const apsCandidates: APSProfile[] = useMemo(() => ([
     { id: 'aps-1', fullName: 'A. Mbala', title: 'Psychologue', yearsExp: 6, relevanceScore: 92, specialties: ['violence physique','urgence'], languages: ['fr','ln'], location: 'Kinshasa / Gombe', workload: 8, satisfaction: 4.6, casesHandled: 120, avgResponseHours: 2, availability: 'now' },
@@ -43,7 +58,7 @@ const OperatorCaseTreatment: React.FC = () => {
 
   const [step, setStep] = useState<1|2|3|4>(1);
   const [state, setState] = useState<TreatmentState>({
-    evaluation: { confirmedUrgency: caseData.urgency, imminentDanger: false, immediateActions: '' },
+    evaluation: { confirmedUrgency: 'moderate', imminentDanger: false, immediateActions: '' },
     assignAps: { selectedApsId: undefined, message: '', notifySms: true, notifyPush: true, notifyEmail: true },
     referrals: { items: [], notifyAps: true, smsVictim: true, callOrgBefore: false },
     validation: { infoChecked: false, orgsSelected: false, messagesRespectful: false, priorityUnderstood: false },
@@ -60,11 +75,32 @@ const OperatorCaseTreatment: React.FC = () => {
       navigationItems={OperatorNavigation}
       userRole="operateur"
     >
+      {loading && (
+        <div className="mb-4 text-sm text-gray-600">Chargement du dossier...</div>
+      )}
+      {error && (
+        <div className="mb-4 text-sm text-red-600 flex items-center justify-between">
+          <span>{error}</span>
+          <Button size="sm" variant="successOutline" className="rounded-full" onClick={() => {
+            if (id) {
+              setLoading(true);
+              setError(null);
+              casesService.getCaseDetail(id)
+                .then((data) => {
+                  setCaseData(data);
+                  setState((prev) => ({ ...prev, evaluation: { ...prev.evaluation, confirmedUrgency: data.urgency } }));
+                })
+                .catch((e) => setError(e?.message || 'Erreur lors du rechargement'))
+                .finally(() => setLoading(false));
+            }
+          }}>Réessayer</Button>
+        </div>
+      )}
       <div className="mb-4">
         <TreatmentStepper step={step} />
       </div>
 
-      {step === 1 && (
+      {caseData && step === 1 && (
         <Step1Analysis
           data={caseData}
           evaluation={state.evaluation}
@@ -72,7 +108,7 @@ const OperatorCaseTreatment: React.FC = () => {
           onDecryptNarrative={() => console.log('Decrypt narrative requested')}
         />
       )}
-      {step === 2 && (
+      {caseData && step === 2 && (
         <Step2AssignAPS
           data={caseData}
           candidates={apsCandidates}
@@ -80,14 +116,14 @@ const OperatorCaseTreatment: React.FC = () => {
           onChange={(patch) => setState((prev) => ({ ...prev, assignAps: { ...prev.assignAps, ...patch } }))}
         />
       )}
-      {step === 3 && (
+      {caseData && step === 3 && (
         <Step3Referrals
           availableOrgs={orgs as any}
           state={state.referrals}
           onChange={(patch) => setState((prev) => ({ ...prev, referrals: { ...prev.referrals, ...patch } }))}
         />
       )}
-      {step === 4 && (
+      {caseData && step === 4 && (
         <Step4Validation
           data={caseData}
           evaluation={state.evaluation}

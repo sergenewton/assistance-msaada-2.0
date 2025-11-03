@@ -36,7 +36,6 @@ function ItemRow({ label, value }: { label: string; value?: React.ReactNode }) {
 
 export const Step1Analysis: React.FC<Step1AnalysisProps> = ({ data, evaluation, onChange, onDecryptNarrative }) => {
   const elapsed = data.elapsedMinutes != null ? `${data.elapsedMinutes} min` : '—';
-
   return (
     <div className="space-y-6">
       {/* Groupe 1 */}
@@ -115,10 +114,13 @@ export const Step1Analysis: React.FC<Step1AnalysisProps> = ({ data, evaluation, 
         <div className="text-sm text-gray-900">{data.location?.address || '—'}</div>
         <div className="mt-3 rounded overflow-hidden border border-gray-200 dark:border-gray-700">
           {typeof data.location?.latitude === 'number' && typeof data.location?.longitude === 'number' ? (
-            <MapContainer center={[data.location.latitude, data.location.longitude]} zoom={13} style={{ height: 256, width: '100%' }}>
+            <MapContainer {...({ center: [data.location.latitude, data.location.longitude], zoom: 13, style: { height: 256, width: '100%' } } as any)}>
               <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                {...({
+                  attribution:
+                    '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                  url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                } as any)}
               />
               <Marker position={[data.location.latitude, data.location.longitude]}>
                 <Popup>

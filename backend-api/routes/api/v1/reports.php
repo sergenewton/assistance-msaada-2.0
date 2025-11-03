@@ -19,9 +19,6 @@ Route::prefix('reports')->name('reports.')->middleware(['auth:sanctum'])->group(
     // CRUD des signalements (certains endpoints peuvent ne pas être encore implémentés)
     Route::get('/', [ReportController::class, 'index'])->name('index');
     // Route::post('/', [ReportController::class, 'store'])->name('store');
-    // Route::get('/{report}', [ReportController::class, 'show'])->name('show');
-    // Route::put('/{report}', [ReportController::class, 'update'])->name('update');
-    // Route::delete('/{report}', [ReportController::class, 'destroy'])->name('destroy');
 
     // Endpoints triage opérateur
     Route::get('/unprocessed', [ReportController::class, 'unprocessed'])->name('unprocessed');
@@ -29,6 +26,11 @@ Route::prefix('reports')->name('reports.')->middleware(['auth:sanctum'])->group(
 
     // Recherche et filtres
     Route::get('/filter', [ReportController::class, 'filter'])->name('filter');
+
+    // IMPORTANT: Catch-all report detail route placed AFTER specific routes to avoid shadowing
+    Route::get('/{report}', [ReportController::class, 'show'])->name('show');
+    // Route::put('/{report}', [ReportController::class, 'update'])->name('update');
+    // Route::delete('/{report}', [ReportController::class, 'destroy'])->name('destroy');
 
     // Gestion des statuts (peuvent être implémentés plus tard)
     // Route::put('/{report}/status', [ReportStatusController::class, 'updateStatus'])->name('update-status');

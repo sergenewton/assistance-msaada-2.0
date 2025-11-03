@@ -116,7 +116,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           navigate('/dashboard');
           break;
         case 'admin':
-          navigate('/admin');
+          navigate('/dashboard');
           break;
         default:
           navigate('/dashboard');
