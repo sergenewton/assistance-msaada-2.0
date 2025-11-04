@@ -88,12 +88,24 @@ Map<String, dynamic> _buildPayload(ReportFormData d) {
 
   List<String> mapViolences(Set<ViolenceType> vs) => vs.map((v) {
         return switch (v) {
-          ViolenceType.physical => 'physical',
-          ViolenceType.sexual => 'sexual',
-          ViolenceType.psychological => 'psychological',
-          ViolenceType.economic => 'economic',
+          // Detailed categories
+          ViolenceType.rape => 'rape',
+          ViolenceType.sexualAssault => 'sexual_assault',
+          ViolenceType.sexualHarassment => 'sexual_harassment',
+          ViolenceType.sexualExploitation => 'sexual_exploitation',
           ViolenceType.forcedMarriage => 'forced_marriage',
-          ViolenceType.mgf => 'mgf',
+          ViolenceType.fgm => 'fgm',
+          ViolenceType.incest => 'incest',
+          ViolenceType.sextortion => 'sextortion',
+          ViolenceType.physicalAssault => 'physical_assault',
+          ViolenceType.denialResources => 'denial_resources',
+          ViolenceType.psychologicalViolence => 'psychological_violence',
+          ViolenceType.sexualSlavery => 'sexual_slavery',
+          // Backward-compatible generic categories
+          ViolenceType.physical => 'physical_assault',
+          ViolenceType.sexual => 'sexual_assault',
+          ViolenceType.psychological => 'psychological_violence',
+          ViolenceType.economic => 'denial_resources',
           ViolenceType.other => 'other',
         };
       }).toList();
@@ -134,21 +146,15 @@ Map<String, dynamic> _buildPayload(ReportFormData d) {
 
   // Preferred contact method: choose a single primary based on priority
   String? mapPrimaryContact(Set<ContactPref> prefs) {
-    const priority = [ContactPref.call, ContactPref.whatsapp, ContactPref.sms, ContactPref.inApp, ContactPref.none];
-    ContactPref? first;
-    for (final p in priority) {
-      if (prefs.contains(p)) {
-        first = p;
-        break;
-      }
-    }
+    // If more than one method is selected, keep primary null per request
+    if (prefs.length != 1) return null;
+    final first = prefs.first;
     return switch (first) {
       ContactPref.call => 'call',
       ContactPref.whatsapp => 'whatsapp',
       ContactPref.sms => 'sms',
-  ContactPref.inApp => 'in-app',
+      ContactPref.inApp => 'in-app',
       ContactPref.none => 'none',
-      null => null,
     };
   }
 
@@ -202,6 +208,14 @@ Map<String, dynamic> _buildPayload(ReportFormData d) {
     return base;
   }
 
+  String? mapIncidentPlace(IncidentPlace? p) => switch (p) {
+        IncidentPlace.domicile => 'domicile',
+        IncidentPlace.travail => 'travail',
+        IncidentPlace.espacePublic => 'espace_public',
+        IncidentPlace.autre => 'autre',
+        null => null,
+      };
+
   final payload = <String, dynamic>{
     'is_anonymous': d.anonymous,
     // Use plural key to match backend/mobile schema; backend also accepts legacy 'violence_type'
@@ -210,7 +224,8 @@ Map<String, dynamic> _buildPayload(ReportFormData d) {
     'victim_age_range': mapAge(d.victimAgeGroup),
     'victim_gender': mapSex(d.victimSex),
     'incident_date': dateStr,
-    'incident_location': locationLine(),
+  // Prefer the place selector if provided; otherwise keep address string for backward compatibility
+  'incident_location': mapIncidentPlace(d.incidentPlace) ?? locationLine(),
     'address_line': d.addressLine?.trim(),
     'latitude': d.latitude,
     'longitude': d.longitude,
@@ -225,6 +240,10 @@ Map<String, dynamic> _buildPayload(ReportFormData d) {
     // Derived risk flags
     'needs_urgent_medical': needsUrgentMedical(d.needs),
     'needs': mapNeeds(d.needs),
+  'perpetrator_has_home_access': d.perpetratorHasHomeAccess,
+  'location_province': d.locationProvince,
+  'location_commune': d.locationCommune,
+  'location_quartier': d.locationQuartier,
     // Contact number: if method is 'none' we still send number for emergency callback? Keep as provided.
     'contact_number': (d.anonymous == true && (d.contactPrefs.isEmpty || d.contactPrefs.contains(ContactPref.none)))
         ? null

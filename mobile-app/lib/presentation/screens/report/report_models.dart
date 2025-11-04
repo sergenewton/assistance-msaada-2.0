@@ -4,12 +4,24 @@ import 'package:flutter/foundation.dart';
 enum ReporterRole { victim, witness, concerned }
 enum Urgency { critical, high, moderate, low }
 enum ViolenceType {
+  // Detailed categories requested
+  rape,
+  sexualAssault,
+  sexualHarassment,
+  sexualExploitation,
+  forcedMarriage,
+  fgm,
+  incest,
+  sextortion,
+  physicalAssault,
+  denialResources,
+  psychologicalViolence,
+  sexualSlavery,
+  // Backward-compatible generic categories (mapped to detailed ones)
   physical,
   sexual,
   psychological,
   economic,
-  forcedMarriage,
-  mgf,
   other,
 }
 
@@ -24,6 +36,7 @@ enum Relation {
   unknown,
   other,
 }
+enum IncidentPlace { domicile, travail, espacePublic, autre }
 enum NeedType {
   psychological,
   medical,
@@ -57,6 +70,7 @@ class ReportFormData {
   final String? addressLine; // Adresse saisie libre
   final double? latitude;
   final double? longitude;
+  final IncidentPlace? incidentPlace; // Domicile/Travail/Espace public/Autre
   final Frequency? frequency;
   final Relation? relation;
   final String? descriptionText;
@@ -76,6 +90,12 @@ class ReportFormData {
   final Set<ContactPref> contactPrefs; // multi-select
   final TimePref? timePref;
   final String? securityCode;
+  // Location administrative
+  final String? locationProvince;
+  final String? locationCommune;
+  final String? locationQuartier;
+  // Risk indicator
+  final bool? perpetratorHasHomeAccess;
 
   const ReportFormData({
     this.anonymous,
@@ -90,6 +110,7 @@ class ReportFormData {
   this.addressLine,
     this.latitude,
     this.longitude,
+  this.incidentPlace,
     this.frequency,
     this.relation,
     this.descriptionText,
@@ -103,6 +124,10 @@ class ReportFormData {
     this.contactPrefs = const {},
     this.timePref,
     this.securityCode,
+    this.locationProvince,
+    this.locationCommune,
+    this.locationQuartier,
+    this.perpetratorHasHomeAccess,
   });
 
   ReportFormData copyWith({
@@ -118,6 +143,7 @@ class ReportFormData {
   String? addressLine,
     double? latitude,
     double? longitude,
+  IncidentPlace? incidentPlace,
     Frequency? frequency,
     Relation? relation,
     String? descriptionText,
@@ -131,6 +157,10 @@ class ReportFormData {
     Set<ContactPref>? contactPrefs,
     TimePref? timePref,
     String? securityCode,
+    String? locationProvince,
+    String? locationCommune,
+    String? locationQuartier,
+    bool? perpetratorHasHomeAccess,
   }) {
     return ReportFormData(
       anonymous: anonymous ?? this.anonymous,
@@ -146,6 +176,7 @@ class ReportFormData {
   addressLine: addressLine ?? this.addressLine,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
+      incidentPlace: incidentPlace ?? this.incidentPlace,
       frequency: frequency ?? this.frequency,
       relation: relation ?? this.relation,
       descriptionText: descriptionText ?? this.descriptionText,
@@ -159,6 +190,10 @@ class ReportFormData {
       contactPrefs: contactPrefs ?? this.contactPrefs,
       timePref: timePref ?? this.timePref,
       securityCode: securityCode ?? this.securityCode,
+      locationProvince: locationProvince ?? this.locationProvince,
+      locationCommune: locationCommune ?? this.locationCommune,
+      locationQuartier: locationQuartier ?? this.locationQuartier,
+      perpetratorHasHomeAccess: perpetratorHasHomeAccess ?? this.perpetratorHasHomeAccess,
     );
   }
 }
