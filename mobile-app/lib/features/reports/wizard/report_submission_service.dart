@@ -146,7 +146,7 @@ Map<String, dynamic> _buildPayload(ReportFormData d) {
       ContactPref.call => 'call',
       ContactPref.whatsapp => 'whatsapp',
       ContactPref.sms => 'sms',
-      ContactPref.inApp => 'in_app',
+  ContactPref.inApp => 'in-app',
       ContactPref.none => 'none',
       null => null,
     };
@@ -160,7 +160,7 @@ Map<String, dynamic> _buildPayload(ReportFormData d) {
         ContactPref.call => 'call',
         ContactPref.whatsapp => 'whatsapp',
         ContactPref.sms => 'sms',
-        ContactPref.inApp => 'in_app',
+        ContactPref.inApp => 'in-app',
         ContactPref.none => 'none',
       };
     }).toList();
@@ -175,6 +175,18 @@ Map<String, dynamic> _buildPayload(ReportFormData d) {
 
   // Booleans derived from needs when sensible
   bool? needsUrgentMedical(Set<NeedType> needs) => needs.contains(NeedType.medical) ? true : null;
+
+  Map<String, bool>? mapNeeds(Set<NeedType> needs) {
+    if (needs.isEmpty) return null;
+    return {
+      'psycho': needs.contains(NeedType.psychological),
+      'medical': needs.contains(NeedType.medical),
+      'legal': needs.contains(NeedType.legal),
+      'shelter': needs.contains(NeedType.shelter),
+      'economic': needs.contains(NeedType.economic),
+      'police': needs.contains(NeedType.policeProtection),
+    };
+  }
 
   final incidentDate = d.incidentDate;
   final dateStr = incidentDate != null
@@ -192,7 +204,8 @@ Map<String, dynamic> _buildPayload(ReportFormData d) {
 
   final payload = <String, dynamic>{
     'is_anonymous': d.anonymous,
-    'violence_type': mapViolences(d.violenceTypes),
+    // Use plural key to match backend/mobile schema; backend also accepts legacy 'violence_type'
+    'violence_types': mapViolences(d.violenceTypes),
     'urgency_level': mapUrgency(d.urgency),
     'victim_age_range': mapAge(d.victimAgeGroup),
     'victim_gender': mapSex(d.victimSex),
@@ -203,6 +216,7 @@ Map<String, dynamic> _buildPayload(ReportFormData d) {
     'longitude': d.longitude,
     'incident_frequency': mapFreq(d.frequency),
     'narrative': d.descriptionText,
+    'narrative_encrypted': false,
     'perpetrator_relationship': mapRelation(d.relation),
     'preferred_contact_method': mapPrimaryContact(d.contactPrefs),
     'preferred_contact_methods': mapAllContacts(d.contactPrefs),
@@ -210,6 +224,7 @@ Map<String, dynamic> _buildPayload(ReportFormData d) {
     'safety_code_word': d.securityCode,
     // Derived risk flags
     'needs_urgent_medical': needsUrgentMedical(d.needs),
+    'needs': mapNeeds(d.needs),
     // Contact number: if method is 'none' we still send number for emergency callback? Keep as provided.
     'contact_number': (d.anonymous == true && (d.contactPrefs.isEmpty || d.contactPrefs.contains(ContactPref.none)))
         ? null
@@ -217,7 +232,7 @@ Map<String, dynamic> _buildPayload(ReportFormData d) {
     // Attachments not yet sent (requires multipart); send simple names for trace if backend tolerates extras
     'attachments': {
       'photos': d.photoPaths.map(_basename).toList(),
-      'audio': d.audioPath != null ? _basename(d.audioPath!) : null,
+      'audio': d.audioPath != null ? [_basename(d.audioPath!)] : <String>[],
       'documents': d.documentPaths.map(_basename).toList(),
       'screenshots': d.screenshotPaths.map(_basename).toList(),
     },
