@@ -6,6 +6,7 @@ use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class UsersSeeder extends Seeder
 {
@@ -19,21 +20,7 @@ class UsersSeeder extends Seeder
         
         // Utilisateurs de test pour chaque profil
         $users = [
-            // 1. Survivante / Témoin
-            [
-                'email' => null, // Pas d'email obligatoire pour les survivantes
-                'phone' => '+243901234567',
-                'password' => Hash::make('SurvivantSecure123!'),
-                'role_id' => $roles['survivante']->id,
-                'first_name' => 'Marie',
-                'last_name' => 'Anonyme',
-                'is_active' => true,
-                'email_verified_at' => now(),
-                'phone_verified_at' => now(),
-                'created_at' => now(),
-                'updated_at' => now()
-            ],
-            
+      
             // 2. Agent Psychosocial (APS)
             [
                 'email' => 'aps@msaada.org',
@@ -72,8 +59,6 @@ class UsersSeeder extends Seeder
                 'role_id' => $roles['organisation']->id,
                 'first_name' => 'Dr. Michel',
                 'last_name' => 'Tshala',
-                'organization_name' => 'Hôpital Général de Kinshasa',
-                'organization_type' => 'medical',
                 'is_active' => true,
                 'email_verified_at' => now(),
                 'phone_verified_at' => now(),
@@ -89,8 +74,6 @@ class UsersSeeder extends Seeder
                 'role_id' => $roles['organisation']->id,
                 'first_name' => 'Commissaire Grace',
                 'last_name' => 'Matondo',
-                'organization_name' => 'Police Nationale Congolaise - Bureau VBG',
-                'organization_type' => 'security',
                 'is_active' => true,
                 'email_verified_at' => now(),
                 'phone_verified_at' => now(),
@@ -106,8 +89,6 @@ class UsersSeeder extends Seeder
                 'role_id' => $roles['organisation']->id,
                 'first_name' => 'Me. Antoinette',
                 'last_name' => 'Nsimba',
-                'organization_name' => 'Centre d\'Assistance Juridique aux Femmes',
-                'organization_type' => 'legal',
                 'is_active' => true,
                 'email_verified_at' => now(),
                 'phone_verified_at' => now(),
@@ -159,26 +140,12 @@ class UsersSeeder extends Seeder
                 'phone_verified_at' => now(),
                 'created_at' => now(),
                 'updated_at' => now()
-            ],
-            
-            // Survivantes supplémentaires (pour tests du système)
-            [
-                'email' => null,
-                'phone' => '+243901234576',
-                'password' => Hash::make('Survivant2Secure123!'),
-                'role_id' => $roles['survivante']->id,
-                'first_name' => 'Anonyme',
-                'last_name' => 'Survivante2',
-                'is_active' => true,
-                'email_verified_at' => null,
-                'phone_verified_at' => now(),
-                'created_at' => now(),
-                'updated_at' => now()
             ]
         ];
 
         // Insertion des utilisateurs
         foreach ($users as $user) {
+            $user['id'] = Str::uuid();
             DB::table('users')->updateOrInsert(
                 ['email' => $user['email'], 'phone' => $user['phone']], 
                 $user

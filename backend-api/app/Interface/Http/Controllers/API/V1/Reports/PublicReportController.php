@@ -14,17 +14,16 @@ class PublicReportController extends Controller
     /**
      * Public submit endpoint: accepts reports without authentication.
      */
-    public function submit(Request $request)
+    public function submit(Request $request): JsonResponse
     {
         $payload = $request->all();
 
         // Basic validation (support both legacy and new mobile payloads)
         $v = Validator::make($payload, [
-            // Accept either violence_type (string) or violence_types (array)
             'violence_type' => 'sometimes',
             'violence_types' => 'sometimes|array|min:1',
+            'violence_types.*' => 'string|max:50',
             'urgency_level' => 'required|string|in:low,moderate,high,critical',
-            // Accept either a place string or an address line/coordinates
             'incident_location' => 'sometimes',
             'address_line' => 'sometimes|string',
             'latitude' => 'sometimes|numeric',
@@ -32,8 +31,8 @@ class PublicReportController extends Controller
             'incident_date' => 'sometimes|date',
             'preferred_contact_methods' => 'sometimes|array',
             'preferred_contact_method' => 'sometimes|nullable|string',
-            'preferred_contact_hours' => 'sometimes', // string or array
-            'narrative' => 'sometimes|nullable|string',
+            'preferred_contact_hours' => 'sometimes',
+            'narrative' => 'sometimes|nullable|string|max:1000',
             'narrative_encrypted' => 'sometimes|boolean',
             'is_anonymous' => 'sometimes|boolean',
         ]);
@@ -74,21 +73,18 @@ class PublicReportController extends Controller
                 $violenceTypes = [$normalizeViolence($vSingle) ?? 'other'];
             }
         }
+
         if (empty($violenceTypes)) {
-            // fallback required validation
             return new JsonResponse([
                 'success' => false,
                 'message' => 'Données invalides',
                 'errors' => ['violence_types' => ['Au moins un type de violence est requis.']],
             ], 422);
         }
+
         $violencePrimary = $violenceTypes[0] ?? 'other';
 
         // Extract location
-        // New mobile payload can send either:
-        // - incident_location as a place (e.g., 'domicile')
-        // - address_line, latitude, longitude as top-level fields
-        // Legacy payload may send incident_location as an object
         $place = null;
         $addressLine = $payload['address_line'] ?? null;
         $lat = $payload['latitude'] ?? null;
@@ -101,7 +97,6 @@ class PublicReportController extends Controller
                 $lng = $lng ?? ($loc['longitude'] ?? null);
                 $place = $loc['place'] ?? null;
             } elseif (is_string($loc)) {
-                // Likely a place enum like 'domicile'
                 $place = $loc;
             }
         }
@@ -109,7 +104,8 @@ class PublicReportController extends Controller
         // Contact methods
         $preferredContactMethod = $payload['preferred_contact_method'] ?? null;
         $preferredContactMethods = $payload['preferred_contact_methods'] ?? null;
-        // Normalize contact hours: accept string or array
+
+        // Normalize contact hours: accept string or array, store as JSON
         $preferredContactHours = $payload['preferred_contact_hours'] ?? null;
         if (is_string($preferredContactHours)) {
             $preferredContactHours = [$preferredContactHours];
@@ -123,8 +119,8 @@ class PublicReportController extends Controller
             ? null
             : ($payload['contact_number'] ?? null);
 
-        // Generate tracking number VBG-XXXX-XXXX
-        $tracking = sprintf('VBG-%04d-%04d', random_int(0, 9999), random_int(0, 9999));
+        // Generate tracking number VBG-YYYY-XXXX-XXXX
+        $tracking = sprintf('VBG-%s-%04d-%04d', date('Y'), random_int(0, 9999), random_int(0, 9999));
 
         $report = new Report();
         $report->id = (string) Str::uuid();
@@ -138,7 +134,8 @@ class PublicReportController extends Controller
         $report->violence_types = $violenceTypes;
         $report->urgency_level = $payload['urgency_level'];
         $report->incident_date = $payload['incident_date'] ?? null;
-        // Store both place and address in incident_location fields
+
+        // Incident & location fields
         $report->incident_location = $place ?? $addressLine;
         $report->incident_location_json = [
             'place' => $place,
@@ -149,6 +146,8 @@ class PublicReportController extends Controller
         $report->address_line = $addressLine;
         $report->latitude = $lat;
         $report->longitude = $lng;
+
+        // Narrative & victim details
         $report->narrative = $payload['narrative'] ?? null;
         $report->victim_age_range = $payload['victim_age_range'] ?? null;
         $report->victim_gender = $payload['victim_gender'] ?? null;
@@ -156,17 +155,29 @@ class PublicReportController extends Controller
         $report->location_commune = $payload['location_commune'] ?? null;
         $report->location_quartier = $payload['location_quartier'] ?? null;
         $report->perpetrator_relationship = $payload['perpetrator_relationship'] ?? null;
+        $report->perpetrator_has_home_access = $payload['perpetrator_has_home_access'] ?? null;
+
+        // Danger indicators
         $report->is_safe_now = array_key_exists('is_safe_now', $payload) ? (bool)$payload['is_safe_now'] : null;
         $report->needs_urgent_medical = array_key_exists('needs_urgent_medical', $payload) ? (bool)$payload['needs_urgent_medical'] : null;
         $report->children_at_risk = array_key_exists('children_at_risk', $payload) ? (bool)$payload['children_at_risk'] : null;
         $report->death_threats = array_key_exists('death_threats', $payload) ? (bool)$payload['death_threats'] : null;
+
+        // Contact preferences
         $report->preferred_contact_method = $preferredContactMethod;
-        $report->preferred_contact_methods = is_array($preferredContactMethods) ? $preferredContactMethods : ($preferredContactMethods ? [$preferredContactMethods] : null);
-        $report->preferred_contact_hours = $preferredContactHours;
+        $report->preferred_contact_methods = is_array($preferredContactMethods)
+            ? $preferredContactMethods
+            : ($preferredContactMethods ? [$preferredContactMethods] : null);
+        $report->preferred_contact_hours = $preferredContactHours
+            ? json_encode($preferredContactHours)
+            : null;
+
         $report->safety_code_word = $payload['safety_code_word'] ?? null;
         $report->attachments = $payload['attachments'] ?? null;
         $report->status = 'new';
-        // Keep full payload for traceability, including fields we don't map to columns (e.g., narrative_encrypted, needs, perpetrator_has_home_access)
+        $report->created_by = 'public_api'; // audit trail
+
+        // Full payload for traceability
         $report->payload = $payload;
         $report->save();
 
@@ -177,6 +188,8 @@ class PublicReportController extends Controller
             'data' => [
                 'id' => $report->id,
                 'created_at' => $report->created_at?->toISOString(),
+                'urgency_level' => $report->urgency_level,
+                'violence_types' => $report->violence_types,
             ],
         ], 201);
     }
@@ -184,9 +197,10 @@ class PublicReportController extends Controller
     /**
      * Public get-by-tracking endpoint.
      */
-    public function showByTracking(string $tracking)
+    public function showByTracking(string $tracking): JsonResponse
     {
         $report = Report::query()->where('report_number', $tracking)->first();
+
         if (!$report) {
             return new JsonResponse([
                 'success' => false,
@@ -199,17 +213,26 @@ class PublicReportController extends Controller
             'data' => [
                 'report_number' => $report->report_number,
                 'status' => $report->status,
+                'status_label' => ucfirst($report->status),
                 'created_at' => $report->created_at?->toISOString(),
                 'violence_type' => $report->violence_type,
                 'violence_types' => $report->violence_types,
                 'urgency_level' => $report->urgency_level,
+                'victim_age_range' => $report->victim_age_range,
+                'victim_gender' => $report->victim_gender,
+                'location_province' => $report->location_province,
+                'location_commune' => $report->location_commune,
                 'incident_location' => [
+                    'place' => $report->incident_location,
                     'address_line' => $report->address_line,
                     'latitude' => $report->latitude,
                     'longitude' => $report->longitude,
                 ],
                 'preferred_contact_method' => $report->preferred_contact_method,
                 'preferred_contact_methods' => $report->preferred_contact_methods,
+                'preferred_contact_hours' => $report->preferred_contact_hours
+                    ? json_decode($report->preferred_contact_hours, true)
+                    : null,
             ],
         ]);
     }

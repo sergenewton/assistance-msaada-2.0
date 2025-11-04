@@ -12,15 +12,19 @@ class Organization extends Model
     use HasUuids, SoftDeletes;
 
     /**
-     * The attributes that are mass assignable.
+     * ✅ Attributs assignables en masse
      */
     protected $fillable = [
         'name',
         'type',
-        'specialties',
-        'contact_email',
-        'contact_phone',
+        'sector',
         'address',
+        'contact_phone',
+        'contact_email',
+        'contact_person',
+        'services_offered',
+        'specialties',
+        'availability',
         'province',
         'commune',
         'is_active',
@@ -31,9 +35,10 @@ class Organization extends Model
     ];
 
     /**
-     * The attributes that should be cast.
+     * 🎯 Casts automatiques
      */
     protected $casts = [
+        'services_offered' => 'array',
         'specialties' => 'array',
         'languages_spoken' => 'array',
         'is_active' => 'boolean',
@@ -46,39 +51,30 @@ class Organization extends Model
     ];
 
     /**
-     * Utilisateurs appartenant à cette organisation
+     * 👥 Relations
      */
     public function users(): HasMany
     {
         return $this->hasMany(User::class);
     }
 
-    /**
-     * Référencements vers cette organisation
-     */
     public function referrals(): HasMany
     {
         return $this->hasMany(Referral::class);
     }
 
-    /**
-     * Référencements en attente
-     */
     public function pendingReferrals(): HasMany
     {
-        return $this->hasMany(Referral::class)->where('status', 'pending');
+        return $this->referrals()->where('status', 'pending');
     }
 
-    /**
-     * Référencements acceptés
-     */
     public function acceptedReferrals(): HasMany
     {
-        return $this->hasMany(Referral::class)->where('status', 'accepted');
+        return $this->referrals()->where('status', 'accepted');
     }
 
     /**
-     * Calcule le pourcentage de capacité utilisée
+     * 📊 Calcul du pourcentage de capacité utilisée
      */
     public function getCapacityPercentageAttribute(): float
     {
@@ -89,7 +85,7 @@ class Organization extends Model
     }
 
     /**
-     * Vérifie si l'organisation peut accepter de nouveaux cas
+     * 🟢 Vérifie si l’organisation peut accepter de nouveaux cas
      */
     public function canAcceptNewCases(): bool
     {
@@ -98,14 +94,14 @@ class Organization extends Model
         }
 
         if (!$this->max_capacity) {
-            return true; // Pas de limite de capacité
+            return true; // pas de limite
         }
 
         return $this->current_load < $this->max_capacity;
     }
 
     /**
-     * Vérifie si l'organisation a une spécialité
+     * 🎯 Vérifie si l'organisation a une spécialité donnée
      */
     public function hasSpecialty(string $specialty): bool
     {
@@ -113,7 +109,7 @@ class Organization extends Model
     }
 
     /**
-     * Vérifie si l'organisation parle une langue
+     * 🗣️ Vérifie si l'organisation parle une langue donnée
      */
     public function speaksLanguage(string $language): bool
     {
@@ -121,83 +117,62 @@ class Organization extends Model
     }
 
     /**
-     * Scope pour les organisations actives
+     * 🔍 Scopes dynamiques
      */
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
     }
 
-    /**
-     * Scope par type d'organisation
-     */
     public function scopeByType($query, string $type)
     {
         return $query->where('type', $type);
     }
 
-    /**
-     * Scope par province
-     */
     public function scopeByProvince($query, string $province)
     {
         return $query->where('province', $province);
     }
 
-    /**
-     * Scope pour les organisations disponibles (avec capacité)
-     */
     public function scopeAvailable($query)
     {
         return $query->where('is_active', true)
-                    ->where(function ($q) {
-                        $q->whereNull('max_capacity')
-                          ->orWhereColumn('current_load', '<', 'max_capacity');
-                    });
+            ->where(function ($q) {
+                $q->whereNull('max_capacity')
+                  ->orWhereColumn('current_load', '<', 'max_capacity');
+            });
     }
 
-    /**
-     * Scope par spécialité
-     */
     public function scopeWithSpecialty($query, string $specialty)
     {
         return $query->whereJsonContains('specialties', $specialty);
     }
 
-    /**
-     * Scope par langue parlée
-     */
     public function scopeWithLanguage($query, string $language)
     {
         return $query->whereJsonContains('languages_spoken', $language);
     }
 
-    /**
-     * Scope par score de performance minimum
-     */
     public function scopeWithMinPerformance($query, float $minScore)
     {
         return $query->where('performance_score', '>=', $minScore);
     }
 
     /**
-     * Incrémente la charge actuelle
+     * ⚙️ Gestion de la charge
      */
     public function incrementLoad(): void
     {
         $this->increment('current_load');
     }
 
-    /**
-     * Décrémente la charge actuelle
-     */
     public function decrementLoad(): void
     {
         $this->decrement('current_load');
     }
 
     /**
-     * Met à jour le score de performance basé sur les référencements
+     * 🧮 Met à jour le score de performance basé sur les référencements
      */
     public function updatePerformanceScore(): void
     {
@@ -210,15 +185,14 @@ class Organization extends Model
             return;
         }
 
-        // Calcul basé sur le temps de réponse et les feedbacks
         $avgResponseTime = $completedReferrals->avg(function ($referral) {
-            return $referral->accepted_at ? 
-                   $referral->created_at->diffInHours($referral->accepted_at) : 0;
+            return $referral->accepted_at
+                ? $referral->created_at->diffInHours($referral->accepted_at)
+                : 0;
         });
 
-        // Score basé sur le temps de réponse (24h = score parfait)
         $responseScore = max(0, min(5, 5 - ($avgResponseTime / 24)));
-        
+
         $this->update(['performance_score' => round($responseScore, 2)]);
     }
 }

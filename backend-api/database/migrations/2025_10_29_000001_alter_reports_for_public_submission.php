@@ -26,20 +26,50 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('reports', function (Blueprint $table) {
-            $table->dropColumn([
-                'payload',
-                'violence_types',
-                'incident_location_json',
-                'address_line',
-                'latitude',
-                'longitude',
-                'preferred_contact_methods',
-                'reporter_name',
-                'victim_name',
-                'contact_number',
-                'attachments',
-            ]);
-        });
+    Schema::table('reports', function (Blueprint $table) {
+        if (Schema::hasColumn('reports', 'payload')) {
+            $table->dropColumn('payload');
+        }
+
+        if (Schema::hasColumn('reports', 'violence_types')) {
+            $table->dropColumn('violence_types');
+        }
+
+        if (Schema::hasColumn('reports', 'incident_location_json')) {
+            $table->dropColumn('incident_location_json');
+        }
+
+        if (Schema::hasColumn('reports', 'address_line')) {
+            $table->dropColumn('address_line');
+        }
+
+        if (Schema::hasColumn('reports', 'latitude')) {
+            $table->dropColumn('latitude');
+        }
+
+        if (Schema::hasColumn('reports', 'longitude')) {
+            $table->dropColumn('longitude');
+        }
+
+        if (Schema::hasColumn('reports', 'preferred_contact_methods')) {
+            $table->dropColumn('preferred_contact_methods');
+        }
+
+        if (Schema::hasColumn('reports', 'reporter_name')) {
+            $table->dropColumn('reporter_name');
+        }
+
+        if (Schema::hasColumn('reports', 'victim_name')) {
+            $table->dropColumn('victim_name');
+        }
+
+        if (Schema::hasColumn('reports', 'contact_number')) {
+            $table->dropColumn('contact_number');
+        }
+
+        if (Schema::hasColumn('reports', 'attachments')) {
+            $table->dropColumn('attachments');
+        }
+    });
     }
 };

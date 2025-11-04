@@ -20,8 +20,8 @@ class OrganizationsSeeder extends Seeder
                 'type' => 'medical',
                 'sector' => 'Santé',
                 'address' => 'Avenue du 24 Novembre, Kinshasa/Gombe',
-                'phone' => '+243814567890',
-                'email' => 'contact@hgk.cd',
+                'contact_phone' => '+243814567890',
+                'contact_email' => 'contact@hgk.cd',
                 'contact_person' => 'Dr. Michel Tshala',
                 'services_offered' => json_encode([
                     'Soins médicaux d\'urgence',
@@ -29,7 +29,7 @@ class OrganizationsSeeder extends Seeder
                     'Suivi psychologique',
                     'Examens médico-légaux'
                 ]),
-                'specialities' => json_encode(['VBG', 'Urgences', 'Psychologie']),
+                'specialties' => json_encode(['VBG', 'Urgences', 'Psychologie']),
                 'availability' => '24h/7j',
                 'is_active' => true,
                 'created_at' => now(),
@@ -40,8 +40,8 @@ class OrganizationsSeeder extends Seeder
                 'type' => 'medical',
                 'sector' => 'Santé',
                 'address' => 'Mont Ngafula, Kinshasa',
-                'phone' => '+243815678901',
-                'email' => 'vbg@monkole.org',
+                'contact_phone' => '+243815678901',
+                'contact_email' => 'vbg@monkole.org',
                 'contact_person' => 'Dr. Marie Nzuzi',
                 'services_offered' => json_encode([
                     'Consultations VBG',
@@ -49,7 +49,7 @@ class OrganizationsSeeder extends Seeder
                     'Accompagnement psychologique',
                     'Formation médicale'
                 ]),
-                'specialities' => json_encode(['VBG', 'Gynécologie', 'Pédiatrie']),
+                'specialties' => json_encode(['VBG', 'Gynécologie', 'Pédiatrie']),
                 'availability' => 'Lun-Ven 7h-17h, Urgences 24h',
                 'is_active' => true,
                 'created_at' => now(),
@@ -62,8 +62,8 @@ class OrganizationsSeeder extends Seeder
                 'type' => 'security',
                 'sector' => 'Sécurité',
                 'address' => 'Avenue Kabasele Tshamala, Kinshasa/Kalamu',
-                'phone' => '+243816789012',
-                'email' => 'vbg@pnc.cd',
+                'contact_phone' => '+243816789012',
+                'contact_email' => 'vbg@pnc.cd',
                 'contact_person' => 'Commissaire Grace Matondo',
                 'services_offered' => json_encode([
                     'Dépôt de plaintes VBG',
@@ -71,7 +71,7 @@ class OrganizationsSeeder extends Seeder
                     'Enquêtes spécialisées',
                     'Arrestations'
                 ]),
-                'specialities' => json_encode(['VBG', 'Violence domestique', 'Crimes sexuels']),
+                'specialties' => json_encode(['VBG', 'Violence domestique', 'Crimes sexuels']),
                 'availability' => '24h/7j',
                 'is_active' => true,
                 'created_at' => now(),
@@ -82,8 +82,8 @@ class OrganizationsSeeder extends Seeder
                 'type' => 'security',
                 'sector' => 'Justice',
                 'address' => 'Palais de Justice, Kinshasa/Gombe',
-                'phone' => '+243817890123',
-                'email' => 'vbg@parquet-kinshasa.cd',
+                'contact_phone' => '+243817890123',
+                'contact_email' => 'vbg@parquet-kinshasa.cd',
                 'contact_person' => 'Procureur Adjoint Joseph Mbala',
                 'services_offered' => json_encode([
                     'Poursuites judiciaires',
@@ -91,7 +91,7 @@ class OrganizationsSeeder extends Seeder
                     'Protection judiciaire',
                     'Orientation juridique'
                 ]),
-                'specialities' => json_encode(['Droit pénal', 'VBG', 'Mineurs']),
+                'specialties' => json_encode(['Droit pénal', 'VBG', 'Mineurs']),
                 'availability' => 'Lun-Ven 8h-16h',
                 'is_active' => true,
                 'created_at' => now(),
@@ -104,8 +104,8 @@ class OrganizationsSeeder extends Seeder
                 'type' => 'legal',
                 'sector' => 'Juridique',
                 'address' => 'Avenue Tombalbaye, Kinshasa/Kalamu',
-                'phone' => '+243818901234',
-                'email' => 'info@cajf.org',
+                'contact_phone' => '+243818901234',
+                'contact_email' => 'info@cajf.org',
                 'contact_person' => 'Me. Antoinette Nsimba',
                 'services_offered' => json_encode([
                     'Conseil juridique gratuit',
@@ -113,7 +113,7 @@ class OrganizationsSeeder extends Seeder
                     'Médiation familiale',
                     'Éducation juridique'
                 ]),
-                'specialities' => json_encode(['Droit de la famille', 'VBG', 'Droits des femmes']),
+                'specialties' => json_encode(['Droit de la famille', 'VBG', 'Droits des femmes']),
                 'availability' => 'Lun-Ven 8h-17h',
                 'is_active' => true,
                 'created_at' => now(),
@@ -124,8 +124,8 @@ class OrganizationsSeeder extends Seeder
                 'type' => 'legal',
                 'sector' => 'Juridique',
                 'address' => 'Avenue du Commerce, Kinshasa/Gombe',
-                'phone' => '+243819012345',
-                'email' => 'contact@afjc.org',
+                'contact_phone' => '+243819012345',
+                'contact_email' => 'contact@afjc.org',
                 'contact_person' => 'Me. Claudine Mukamana',
                 'services_offered' => json_encode([
                     'Assistance juridique VBG',
@@ -133,7 +133,7 @@ class OrganizationsSeeder extends Seeder
                     'Formation en droits',
                     'Accompagnement judiciaire'
                 ]),
-                'specialities' => json_encode(['Droits humains', 'VBG', 'Advocacy']),
+                'specialties' => json_encode(['Droits humains', 'VBG', 'Advocacy']),
                 'availability' => 'Lun-Ven 8h-16h',
                 'is_active' => true,
                 'created_at' => now(),
@@ -146,8 +146,8 @@ class OrganizationsSeeder extends Seeder
                 'type' => 'psychosocial',
                 'sector' => 'Psychosocial',
                 'address' => 'Goma, Nord-Kivu',
-                'phone' => '+243820123456',
-                'email' => 'vbg@healafrica.org',
+                'contact_phone' => '+243820123456',
+                'contact_email' => 'vbg@healafrica.org',
                 'contact_person' => 'Dr. Zawadi Mukamana',
                 'services_offered' => json_encode([
                     'Thérapie individuelle',
@@ -155,7 +155,7 @@ class OrganizationsSeeder extends Seeder
                     'Réinsertion sociale',
                     'Formation en traumatisme'
                 ]),
-                'specialities' => json_encode(['Traumatisme', 'VBG', 'Réhabilitation']),
+                'specialties' => json_encode(['Traumatisme', 'VBG', 'Réhabilitation']),
                 'availability' => 'Lun-Sam 8h-18h',
                 'is_active' => true,
                 'created_at' => now(),
@@ -166,8 +166,8 @@ class OrganizationsSeeder extends Seeder
                 'type' => 'psychosocial',
                 'sector' => 'Psychosocial',
                 'address' => 'Avenue Lumumba, Kinshasa/Limete',
-                'phone' => '+243821234567',
-                'email' => 'accompagnement@olame.org',
+                'contact_phone' => '+243821234567',
+                'contact_email' => 'accompagnement@olame.org',
                 'contact_person' => 'Psychologue Sarah Kambale',
                 'services_offered' => json_encode([
                     'Counseling VBG',
@@ -175,7 +175,7 @@ class OrganizationsSeeder extends Seeder
                     'Groupes de parole',
                     'Suivi post-traumatique'
                 ]),
-                'specialities' => json_encode(['Psychologie clinique', 'VBG', 'Famille']),
+                'specialties' => json_encode(['Psychologie clinique', 'VBG', 'Famille']),
                 'availability' => 'Lun-Ven 8h-17h',
                 'is_active' => true,
                 'created_at' => now(),
@@ -188,8 +188,8 @@ class OrganizationsSeeder extends Seeder
                 'type' => 'shelter',
                 'sector' => 'Hébergement',
                 'address' => 'Adresse confidentielle, Kinshasa',
-                'phone' => '+243822345678',
-                'email' => 'urgence@mamajeanne.org',
+                'contact_phone' => '+243822345678',
+                'contact_email' => 'urgence@mamajeanne.org',
                 'contact_person' => 'Coordinatrice Mama Jeanne',
                 'services_offered' => json_encode([
                     'Hébergement d\'urgence',
@@ -197,7 +197,7 @@ class OrganizationsSeeder extends Seeder
                     'Accompagnement social',
                     'Orientation vers services'
                 ]),
-                'specialities' => json_encode(['Protection', 'Urgence', 'Femmes et enfants']),
+                'specialties' => json_encode(['Protection', 'Urgence', 'Femmes et enfants']),
                 'availability' => '24h/7j - Urgences uniquement',
                 'is_active' => true,
                 'created_at' => now(),
@@ -210,8 +210,8 @@ class OrganizationsSeeder extends Seeder
                 'type' => 'economic',
                 'sector' => 'Économique',
                 'address' => 'Avenue des Cliniques, Kinshasa/Kalamu',
-                'phone' => '+243823456789',
-                'email' => 'insertion@pref.org',
+                'contact_phone' => '+243823456789',
+                'contact_email' => 'insertion@pref.org',
                 'contact_person' => 'Coordinateur Albert Mukendi',
                 'services_offered' => json_encode([
                     'Formation professionnelle',
@@ -219,7 +219,7 @@ class OrganizationsSeeder extends Seeder
                     'Accompagnement business',
                     'Alphabétisation'
                 ]),
-                'specialities' => json_encode(['Entrepreneuriat', 'Formation', 'Autonomisation']),
+                'specialties' => json_encode(['Entrepreneuriat', 'Formation', 'Autonomisation']),
                 'availability' => 'Lun-Ven 8h-16h',
                 'is_active' => true,
                 'created_at' => now(),
