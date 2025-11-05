@@ -25,14 +25,36 @@ enum ViolenceType {
   other,
 }
 
+// Allowed violence types for selection in the UI (reduced list)
+const List<ViolenceType> kAllowedViolenceTypes = [
+  ViolenceType.rape,
+  ViolenceType.sexualAssault,
+  ViolenceType.sexualHarassment,
+  ViolenceType.sexualExploitation,
+  ViolenceType.forcedMarriage,
+  ViolenceType.fgm,
+  ViolenceType.incest,
+  ViolenceType.sextortion,
+  ViolenceType.physicalAssault,
+  ViolenceType.denialResources,
+  ViolenceType.psychologicalViolence,
+  ViolenceType.sexualSlavery,
+];
+
 enum AgeGroup { a0_5, a6_12, a13_17, a18_25, a26_35, a36_50, a50plus }
 enum Sex { female, male }
 enum Frequency { first, repeated, chronic }
 enum Relation {
   partner,
   parent,
-  neighbor,
+  familyMember,
+  employer,
   colleague,
+  teacher,
+  authority,
+  religiousLeader,
+  neighbor,
+  stranger,
   unknown,
   other,
 }
@@ -96,6 +118,10 @@ class ReportFormData {
   final String? locationQuartier;
   // Risk indicator
   final bool? perpetratorHasHomeAccess;
+  // Safety indicators
+  final bool? isSafeNow;
+  final bool? childrenAtRisk;
+  final bool? deathThreats;
 
   const ReportFormData({
     this.anonymous,
@@ -128,6 +154,9 @@ class ReportFormData {
     this.locationCommune,
     this.locationQuartier,
     this.perpetratorHasHomeAccess,
+    this.isSafeNow,
+    this.childrenAtRisk,
+    this.deathThreats,
   });
 
   ReportFormData copyWith({
@@ -161,6 +190,9 @@ class ReportFormData {
     String? locationCommune,
     String? locationQuartier,
     bool? perpetratorHasHomeAccess,
+    bool? isSafeNow,
+    bool? childrenAtRisk,
+    bool? deathThreats,
   }) {
     return ReportFormData(
       anonymous: anonymous ?? this.anonymous,
@@ -194,6 +226,9 @@ class ReportFormData {
       locationCommune: locationCommune ?? this.locationCommune,
       locationQuartier: locationQuartier ?? this.locationQuartier,
       perpetratorHasHomeAccess: perpetratorHasHomeAccess ?? this.perpetratorHasHomeAccess,
+      isSafeNow: isSafeNow ?? this.isSafeNow,
+      childrenAtRisk: childrenAtRisk ?? this.childrenAtRisk,
+      deathThreats: deathThreats ?? this.deathThreats,
     );
   }
 }

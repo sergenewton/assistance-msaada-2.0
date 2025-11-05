@@ -1,5 +1,4 @@
 import 'dart:async';
- 
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -24,7 +23,20 @@ class ReportWizardScreen extends StatefulWidget {
 
 class _ReportWizardScreenState extends State<ReportWizardScreen> {
   int _step = 0; // 0..4
-  ReportFormData _data = const ReportFormData();
+  ReportFormData _data = const ReportFormData(
+    anonymous: false,
+    reporterRole: ReporterRole.witness,
+    urgency: Urgency.moderate,
+    violenceTypes: {ViolenceType.sexualAssault},
+    victimAgeGroup: AgeGroup.a13_17,
+    victimSex: Sex.female,
+    isSafeNow: true,
+    childrenAtRisk: false,
+    deathThreats: false,
+    needs: {NeedType.psychological},
+    contactPrefs: {ContactPref.sms, ContactPref.call},
+    timePref: TimePref.morning,
+  );
   bool _submitting = false;
 
   final _formKeys = List.generate(5, (_) => GlobalKey<FormState>());
@@ -92,21 +104,16 @@ class _ReportWizardScreenState extends State<ReportWizardScreen> {
       case 0: // Identification
         if (d.anonymous == null) return 'Veuillez choisir Anonyme ou Nominal.';
         if (d.reporterRole == null) return 'Veuillez indiquer votre rôle.';
-        if (d.urgency == null) return 'Veuillez sélectionner un niveau d’urgence.';
         if (d.violenceTypes.isEmpty) return 'Veuillez sélectionner au moins un type de violence.';
         return null;
       case 1: // Persons & incident
         if (d.victimAgeGroup == null) return 'Veuillez indiquer l’âge de la victime.';
         if (d.victimSex == null) return 'Veuillez indiquer le sexe de la victime.';
-        // Adresse requise (GPS reste optionnel)
+        return null;
+      case 2: // Localisation et Contacts
         if (d.addressLine == null || d.addressLine!.trim().isEmpty) {
           return 'Veuillez saisir l’adresse de l’incident.';
         }
-        return null;
-      case 2: // Needs
-        if (d.needs.isEmpty) return 'Veuillez sélectionner au moins un besoin.';
-        return null;
-      case 3: // Contact
         if (d.contactNumber == null || d.contactNumber!.trim().isEmpty) {
           return 'Veuillez fournir un numéro de contact.';
         }
@@ -114,6 +121,8 @@ class _ReportWizardScreenState extends State<ReportWizardScreen> {
           return 'Veuillez choisir au moins une préférence de contact.';
         }
         if (d.timePref == null) return 'Veuillez choisir un horaire préféré.';
+        return null;
+      case 3: // Description et preuves (tout est optionnel)
         return null;
       default:
         return null;
@@ -365,34 +374,13 @@ class _Step1Identification extends StatelessWidget {
             onTap: () => onChanged(data.copyWith(reporterRole: ReporterRole.concerned)),
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              const Expanded(child: Text('Niveau d’urgence')),
-              IconButton(
-                tooltip: 'Aide',
-                onPressed: () => _showUrgencyHelp(context),
-                icon: const Icon(Icons.info_outline),
-              )
-            ],
-          ),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: Urgency.values
-                .map((u) => _PillOption(
-                      label: _uLabel(u),
-                      selected: data.urgency == u,
-                      onTap: () => onChanged(data.copyWith(urgency: u)),
-                    ))
-                .toList(),
-          ),
           const SizedBox(height: 12),
           const Text('Type(s) de violence (multi-sélection)'),
           const SizedBox(height: 6),
           Wrap(
             spacing: 10,
             runSpacing: 10,
-            children: ViolenceType.values.map((t) {
+            children: kAllowedViolenceTypes.map((t) {
               final selected = data.violenceTypes.contains(t);
               return _PillOption(
                 label: _vLabel(t),
@@ -411,22 +399,7 @@ class _Step1Identification extends StatelessWidget {
     );
   }
 
-  void _showUrgencyHelp(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(16),
-        child: ListView(
-          children: const [
-            _HelpTile(title: 'Risque critique', body: 'Menaces de mort récentes, blessures graves, arme impliquée.'),
-            _HelpTile(title: 'Risque élevé', body: 'Viol, enfants en danger, victime isolée sans soutien.'),
-            _HelpTile(title: 'Risque modéré', body: 'Violence répétée/chronique, dépendance économique, auteur ayant accès au domicile.'),
-            _HelpTile(title: 'Risque faible', body: 'Situation non urgente mais préoccupante.'),
-          ],
-        ),
-      ),
-    );
-  }
+  
 
   static String _rLabel(ReporterRole r) => switch (r) {
         ReporterRole.victim => 'Je suis la victime',
@@ -440,12 +413,24 @@ class _Step1Identification extends StatelessWidget {
         Urgency.low => 'Faible',
       };
   static String _vLabel(ViolenceType t) => switch (t) {
-        ViolenceType.physical => 'Physique',
-        ViolenceType.sexual => 'Sexuelle',
-        ViolenceType.psychological => 'Psychologique / morale',
-        ViolenceType.economic => 'Économique',
-        ViolenceType.forcedMarriage => 'Mariage forcé',
-        ViolenceType.mgf => 'MGF',
+        // Catégories détaillées
+    ViolenceType.rape => 'Viol',
+    ViolenceType.sexualAssault => 'Agression sexuelle',
+    ViolenceType.sexualHarassment => 'Harcèlement sexuel',
+    ViolenceType.sexualExploitation => 'Exploitation sexuelle',
+    ViolenceType.forcedMarriage => 'Mariage forcé',
+    ViolenceType.fgm => 'Mutilations génitales',
+    ViolenceType.incest => 'Inceste',
+    ViolenceType.sextortion => 'Chantage sexuel',
+    ViolenceType.physicalAssault => 'Agression physique',
+    ViolenceType.denialResources => 'Déni de ressources',
+    ViolenceType.psychologicalViolence => 'Violence psychologique',
+    ViolenceType.sexualSlavery => 'L’esclavage sexuel',
+        // Catégories génériques (compatibilité)
+        ViolenceType.physical => 'Violence physique',
+        ViolenceType.sexual => 'Violence sexuelle',
+        ViolenceType.psychological => 'Violence psychologique / morale',
+        ViolenceType.economic => 'Violence économique',
         ViolenceType.other => 'Autre',
       };
 }
@@ -476,20 +461,7 @@ class _Step2PersonsAndIncident extends StatefulWidget {
 class _Step2PersonsAndIncidentState extends State<_Step2PersonsAndIncident> {
   final _reporterCtrl = TextEditingController();
   final _victimCtrl = TextEditingController();
-  final _addressCtrl = TextEditingController();
-  final _descriptionCtrl = TextEditingController();
-
-  // Audio description (optional)
-  final AudioRecorder _recorder = AudioRecorder();
-  bool _recorderReady = false;
-  bool _isRecording = false;
-  bool _gpsSuccess = false;
-  String? _gpsErrorMessage;
-  int _secondsLeft = 0; // countdown while recording
-  Timer? _timer;
-  final FlutterSoundPlayer _player = FlutterSoundPlayer();
-  bool _playerReady = false;
-  bool _isPlaying = false;
+  
   // UI toggle: for anonymous witness/concerned – do you know the victim's name?
   bool _knowsVictimName = false;
 
@@ -498,11 +470,7 @@ class _Step2PersonsAndIncidentState extends State<_Step2PersonsAndIncident> {
     super.initState();
     _reporterCtrl.text = widget.data.reporterName ?? '';
     _victimCtrl.text = widget.data.victimName ?? '';
-    _addressCtrl.text = widget.data.addressLine ?? '';
-    _descriptionCtrl.text = widget.data.descriptionText ?? '';
-
-  _initRecorder();
-  _initPlayer();
+    
   // Initialize victim-name knowledge toggle from existing data
   _knowsVictimName = (widget.data.victimName != null && widget.data.victimName!.trim().isNotEmpty);
   }
@@ -511,14 +479,7 @@ class _Step2PersonsAndIncidentState extends State<_Step2PersonsAndIncident> {
   void dispose() {
     _reporterCtrl.dispose();
     _victimCtrl.dispose();
-    _descriptionCtrl.dispose();
-    _addressCtrl.dispose();
-    // Dispose recorder
-    _recorder.dispose();
-    if (_playerReady) {
-      _player.closePlayer();
-    }
-    _timer?.cancel();
+    
     super.dispose();
   }
 
@@ -649,6 +610,205 @@ class _Step2PersonsAndIncidentState extends State<_Step2PersonsAndIncident> {
             ),
           ]),
           const SizedBox(height: 12),
+
+          // Indicateurs de sécurité
+          const Text('Indicateurs de sécurité'),
+          const SizedBox(height: 6),
+          // Est-ce sûr maintenant ?
+          const Text('La situation est-elle sûre maintenant ?'),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Expanded(
+                child: _SelectTile(
+                  label: 'Oui',
+                  selected: d.isSafeNow == true,
+                  onTap: () => widget.onChanged(d.copyWith(isSafeNow: true)),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _SelectTile(
+                  label: 'Non',
+                  selected: d.isSafeNow == false,
+                  onTap: () => widget.onChanged(d.copyWith(isSafeNow: false)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          // Enfants en danger ?
+          const Text('Des enfants sont-ils en danger ?'),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Expanded(
+                child: _SelectTile(
+                  label: 'Oui',
+                  selected: d.childrenAtRisk == true,
+                  onTap: () => widget.onChanged(d.copyWith(childrenAtRisk: true)),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _SelectTile(
+                  label: 'Non',
+                  selected: d.childrenAtRisk == false,
+                  onTap: () => widget.onChanged(d.copyWith(childrenAtRisk: false)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          // Menaces de mort ?
+          const Text('Y a-t-il des menaces de mort ?'),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Expanded(
+                child: _SelectTile(
+                  label: 'Oui',
+                  selected: d.deathThreats == true,
+                  onTap: () => widget.onChanged(d.copyWith(deathThreats: true)),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _SelectTile(
+                  label: 'Non',
+                  selected: d.deathThreats == false,
+                  onTap: () => widget.onChanged(d.copyWith(deathThreats: false)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          const SizedBox(height: 6),
+
+          // Lien avec l'auteur (relation)
+          const Text('Lien avec l’auteur'),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              Relation.familyMember,
+              Relation.employer,
+              Relation.colleague,
+              Relation.teacher,
+              Relation.authority,
+              Relation.religiousLeader,
+              Relation.neighbor,
+              Relation.stranger,
+              Relation.partner,
+              Relation.parent,
+            ].map((rel) {
+              final selected = d.relation == rel;
+              return _PillOption(
+                label: _relLabel(rel),
+                selected: selected,
+                onTap: () => widget.onChanged(d.copyWith(relation: rel)),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 12),
+        ],
+      ),
+    );
+  }
+
+  static String _ageLabel(AgeGroup a) => switch (a) {
+        AgeGroup.a0_5 => '0–5',
+        AgeGroup.a6_12 => '6–12',
+        AgeGroup.a13_17 => '13–17',
+        AgeGroup.a18_25 => '18–25',
+        AgeGroup.a26_35 => '26–35',
+        AgeGroup.a36_50 => '36–50',
+        AgeGroup.a50plus => '50+',
+      };
+
+  static String _relLabel(Relation r) => switch (r) {
+        Relation.familyMember => 'Membre de la famille',
+        Relation.employer => 'Employeur',
+        Relation.colleague => 'Collègue',
+        Relation.teacher => 'Enseignant',
+        Relation.authority => 'Autorité publique',
+        Relation.religiousLeader => 'Chef religieux',
+        Relation.neighbor => 'Voisin',
+        Relation.stranger => 'Inconnu',
+        Relation.partner => 'Partenaire intime',
+        Relation.parent => 'Parent',
+        Relation.unknown => 'Non précisé',
+        Relation.other => 'Autre',
+      };
+  
+}
+
+// ------------------- Step 3 -------------------
+class _Step3Needs extends StatefulWidget {
+  final ReportFormData data;
+  final ValueChanged<ReportFormData> onChanged;
+  const _Step3Needs({required this.data, required this.onChanged});
+  static String _nLabel(NeedType n) => switch (n) {
+        NeedType.psychological => 'Écoute et soutien psychologique',
+        NeedType.medical => 'Soins médicaux',
+        NeedType.legal => 'Assistance juridique',
+        NeedType.shelter => 'Hébergement d’urgence',
+        NeedType.economic => 'Aide économique ou alimentaire',
+        NeedType.policeProtection => 'Protection policière',
+        NeedType.other => 'Autre',
+      };
+  @override
+  State<_Step3Needs> createState() => _Step3NeedsState();
+}
+
+class _Step3NeedsState extends State<_Step3Needs> {
+  final _addressCtrl = TextEditingController();
+  final _provinceCtrl = TextEditingController();
+  final _communeCtrl = TextEditingController();
+  final _quartierCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();
+  final _codeCtrl = TextEditingController();
+  bool _gpsSuccess = false;
+  String? _gpsErrorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _addressCtrl.text = widget.data.addressLine ?? '';
+    _provinceCtrl.text = widget.data.locationProvince ?? '';
+    _communeCtrl.text = widget.data.locationCommune ?? '';
+    _quartierCtrl.text = widget.data.locationQuartier ?? '';
+    _phoneCtrl.text = widget.data.contactNumber ?? '';
+    _codeCtrl.text = widget.data.securityCode ?? '';
+  }
+
+  @override
+  void dispose() {
+    _addressCtrl.dispose();
+    _provinceCtrl.dispose();
+    _communeCtrl.dispose();
+    _quartierCtrl.dispose();
+    _phoneCtrl.dispose();
+    _codeCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final d = widget.data;
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Étape 3 : Localisation et Contacts',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 12),
+          // Localisation
+          const Text('Informations de localisation', style: TextStyle(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
           TextFormField(
             controller: _addressCtrl,
             decoration: const InputDecoration(
@@ -659,11 +819,27 @@ class _Step2PersonsAndIncidentState extends State<_Step2PersonsAndIncident> {
             validator: (v) => (v == null || v.trim().isEmpty) ? 'Requis' : null,
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Localisation GPS ',
-            style: TextStyle(fontWeight: FontWeight.w500),
+          // Administrative fields
+          TextFormField(
+            controller: _provinceCtrl,
+            decoration: const InputDecoration(labelText: 'Province'),
+            onChanged: (v) => widget.onChanged(d.copyWith(locationProvince: v.isEmpty ? null : v)),
           ),
-           const Text('(si vous êtes sur le lieu ou près de l’incident)'),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _communeCtrl,
+            decoration: const InputDecoration(labelText: 'Commune'),
+            onChanged: (v) => widget.onChanged(d.copyWith(locationCommune: v.isEmpty ? null : v)),
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _quartierCtrl,
+            decoration: const InputDecoration(labelText: 'Quartier'),
+            onChanged: (v) => widget.onChanged(d.copyWith(locationQuartier: v.isEmpty ? null : v)),
+          ),
+          const SizedBox(height: 16),
+          // GPS
+          const Text('Localisation GPS', style: TextStyle(fontWeight: FontWeight.w500)),
           const SizedBox(height: 6),
           OutlinedButton.icon(
             onPressed: _onSendMyLocation,
@@ -692,7 +868,7 @@ class _Step2PersonsAndIncidentState extends State<_Step2PersonsAndIncident> {
               child: Row(
                 children: [
                   const Icon(Icons.check_circle, color: Color(0xFF2E7D32), size: 18),
-                  const SizedBox(width: 6),
+                  const SizedBox(height: 6),
                   Text(
                     'Coordonnées récupérées: Lat ${widget.data.latitude!.toStringAsFixed(5)}, Lng ${widget.data.longitude!.toStringAsFixed(5)}',
                     style: const TextStyle(color: Color(0xFF2E7D32), fontWeight: FontWeight.w600),
@@ -700,15 +876,222 @@ class _Step2PersonsAndIncidentState extends State<_Step2PersonsAndIncident> {
                 ],
               ),
             ),
+          const SizedBox(height: 16),
+          // Contacts
+          const Text('Contacts', style: TextStyle(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _phoneCtrl,
+            keyboardType: TextInputType.phone,
+            decoration: const InputDecoration(
+              labelText: 'Numéro de contact',
+              hintText: 'Ex: +243 99 123 45 67',
+            ),
+            onChanged: (v) => widget.onChanged(d.copyWith(contactNumber: v)),
+            validator: (v) => (v == null || v.trim().isEmpty) ? 'Requis' : null,
+          ),
           const SizedBox(height: 12),
+          Row(
+            children: [
+              const Text('Mot de code de sécurité', style: TextStyle(fontWeight: FontWeight.w600)),
+              const SizedBox(width: 8),
+              _optionalBadge(),
+            ],
+          ),
+          TextFormField(
+            controller: _codeCtrl,
+            onChanged: (v) => widget.onChanged(d.copyWith(securityCode: v.isEmpty ? null : v)),
+            decoration: const InputDecoration(hintText: 'Ex: Soleil'),
+          ),
+          const SizedBox(height: 12),
+          const Text('Préférences de contact (multi-sélection)'),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: ContactPref.values.map((c) {
+              final selected = d.contactPrefs.contains(c);
+              return _PillOption(
+                label: _Step4EvidenceAndContactState._cLabel(c),
+                selected: selected,
+                onTap: () {
+                  final set = {...d.contactPrefs};
+                  selected ? set.remove(c) : set.add(c);
+                  widget.onChanged(d.copyWith(contactPrefs: set));
+                },
+                multi: true,
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 12),
+          const Text('Horaires préférés'),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: TimePref.values
+                .map((t) => _PillOption(
+                      label: _Step4EvidenceAndContactState._tLabel(t),
+                      selected: d.timePref == t,
+                      onTap: () => widget.onChanged(d.copyWith(timePref: t)),
+                    ))
+                .toList(),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            '💡 Vous pouvez choisir de ne pas être contacté en sélectionnant “In-app” ou “Aucun”.',
+            style: TextStyle(color: Colors.grey),
+          ),
+        ],
+      ),
+    );
+  }
 
+  Future<void> _onSendMyLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        setState(() {
+          _gpsSuccess = false;
+          _gpsErrorMessage = 'Service de localisation désactivé. Veuillez l’activer dans les réglages.';
+        });
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          setState(() {
+            _gpsSuccess = false;
+            _gpsErrorMessage = 'Permission de localisation refusée.';
+          });
+          return; // user denied
+        }
+      }
+      if (permission == LocationPermission.deniedForever) {
+        setState(() {
+          _gpsSuccess = false;
+          _gpsErrorMessage = 'Permission refusée définitivement. Autorisez la localisation dans les réglages du système.';
+        });
+        return; // cannot request
+      }
+
+      Position? pos;
+      try {
+        pos = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.best,
+          timeLimit: const Duration(seconds: 10),
+        );
+      } catch (_) {
+        // Fallback to last known position
+        pos = await Geolocator.getLastKnownPosition();
+      }
+      if (pos == null) {
+        setState(() {
+          _gpsSuccess = false;
+          _gpsErrorMessage = 'Impossible d’obtenir la position (délai dépassé ou aucune position connue).';
+        });
+        return;
+      }
+      if (!mounted) return;
+      final updated = widget.data.copyWith(latitude: pos.latitude, longitude: pos.longitude);
+      widget.onChanged(updated);
+      setState(() {
+        _gpsSuccess = true;
+        _gpsErrorMessage = null;
+      });
+    } catch (_) {
+      setState(() {
+        _gpsSuccess = false;
+        _gpsErrorMessage = 'Une erreur est survenue lors de la récupération de la position.';
+      });
+    }
+  }
+}
+
+// ------------------- Step 4 -------------------
+class _Step4EvidenceAndContact extends StatefulWidget {
+  final ReportFormData data;
+  final ValueChanged<ReportFormData> onChanged;
+  const _Step4EvidenceAndContact({required this.data, required this.onChanged});
+  @override
+  State<_Step4EvidenceAndContact> createState() => _Step4EvidenceAndContactState();
+}
+
+class _Step4EvidenceAndContactState extends State<_Step4EvidenceAndContact> {
+  final ImagePicker _picker = ImagePicker();
+  final _descriptionCtrl = TextEditingController();
+
+  // Audio description (optional)
+  final AudioRecorder _recorder = AudioRecorder();
+  bool _recorderReady = false;
+  bool _isRecording = false;
+  int _secondsLeft = 0; // countdown while recording
+  Timer? _timer;
+  final FlutterSoundPlayer _player = FlutterSoundPlayer();
+  bool _playerReady = false;
+  bool _isPlaying = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _descriptionCtrl.text = widget.data.descriptionText ?? '';
+    _initRecorder();
+    _initPlayer();
+  }
+
+  @override
+  void dispose() {
+    _descriptionCtrl.dispose();
+    _recorder.dispose();
+    if (_playerReady) {
+      _player.closePlayer();
+    }
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final d = widget.data;
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Étape 4 : Description et Preuves (Optionnel)',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 12),
+          // Urgence
+          Row(
+            children: [
+              const Expanded(child: Text('Niveau d’urgence')),
+              IconButton(
+                tooltip: 'Aide',
+                onPressed: () => _showUrgencyHelp(context),
+                icon: const Icon(Icons.info_outline),
+              )
+            ],
+          ),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: Urgency.values
+                .map((u) => _PillOption(
+                      label: _Step1Identification._uLabel(u),
+                      selected: d.urgency == u,
+                      onTap: () => widget.onChanged(d.copyWith(urgency: u)),
+                    ))
+                .toList(),
+          ),
+          const SizedBox(height: 12),
+          // Description de l'incident
+          const Text('Description de l’incident'),
           const SizedBox(height: 6),
           TextFormField(
             controller: _descriptionCtrl,
             maxLines: 5,
             decoration: const InputDecoration(
-              labelText: 'Description de l’incident',
-              hintText: 'Décrivez ce qui s’est passé',
+              hintText: 'Décrivez brièvement ce qui s’est passé',
             ),
             onChanged: (v) => widget.onChanged(d.copyWith(descriptionText: v.isEmpty ? null : v)),
           ),
@@ -720,24 +1103,101 @@ class _Step2PersonsAndIncidentState extends State<_Step2PersonsAndIncident> {
               'ℹ️ L’enregistrement audio natif n’est pas activé sur le web dans cette version. Utilisez le texte.',
               style: TextStyle(color: Colors.grey),
             ),
+          const SizedBox(height: 12),
+          // Besoin d'aide
+          const Text('Besoin d’aide'),
+          const SizedBox(height: 6),
+          Text(
+            d.reporterRole == ReporterRole.victim
+                ? 'Quels types d’assistance souhaitez-vous recevoir ?'
+                : 'Quels types d’assistance pensez-vous que la victime a besoin de recevoir ?',
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: NeedType.values.map((n) {
+              final selected = d.needs.contains(n);
+              return _PillOption(
+                label: _Step3Needs._nLabel(n),
+                selected: selected,
+                onTap: () {
+                  final set = {...d.needs};
+                  selected ? set.remove(n) : set.add(n);
+                  widget.onChanged(d.copyWith(needs: set));
+                },
+                multi: true,
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 12),
+          // 4) Preuves (optionnelles)
+          Row(
+            children: [
+              const Text('Preuves', style: TextStyle(fontWeight: FontWeight.w600)),
+              const SizedBox(width: 8),
+              _optionalBadge(),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              OutlinedButton.icon(
+                onPressed: () async {
+                  await _showPhotoSourcePicker(context, d);
+                },
+                icon: const Icon(Icons.image_outlined),
+                label: Text('Photos (${d.photoPaths.length}/5)'),
+              ),
+              OutlinedButton.icon(
+                onPressed: () async {
+                  if (d.audioPath != null) return; // single audio max
+                  final res = await FilePicker.platform.pickFiles(type: FileType.audio, allowMultiple: false);
+                  if (res == null || res.files.isEmpty) return;
+                  final path = res.files.single.path ?? res.files.single.name;
+                  widget.onChanged(d.copyWith(audioPath: path));
+                },
+                icon: const Icon(Icons.mic_none),
+                label: Text(d.audioPath == null ? 'Ou Importer un audio' : 'Audio attaché'),
+              ),
+            ],
+          ),
+          if (d.photoPaths.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            const Text('Photos sélectionnées'),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: d.photoPaths.asMap().entries.map((e) {
+                return _PhotoThumb(
+                  path: e.value,
+                  onRemove: () {
+                    final list = [...d.photoPaths];
+                    list.removeAt(e.key);
+                    widget.onChanged(d.copyWith(photoPaths: list));
+                  },
+                );
+              }).toList(),
+            ),
+          ],
+          if (d.audioPath != null) ...[
+            const SizedBox(height: 8),
+            const Text('Audio attaché'),
+            const SizedBox(height: 4),
+            _fileRow(_pathBaseName(d.audioPath!), onRemove: () => widget.onChanged(d.copyWith(audioPath: null))),
+          ],
+          const SizedBox(height: 8),
         ],
       ),
     );
   }
 
-  static String _ageLabel(AgeGroup a) => switch (a) {
-        AgeGroup.a0_5 => '0–5',
-        AgeGroup.a6_12 => '6–12',
-        AgeGroup.a13_17 => '13–17',
-        AgeGroup.a18_25 => '18–25',
-        AgeGroup.a26_35 => '26–35',
-        AgeGroup.a36_50 => '36–50',
-        AgeGroup.a50plus => '50+',
-      };
-
   Future<void> _initRecorder() async {
     try {
-  final hasPerm = await _recorder.hasPermission();
+      final hasPerm = await _recorder.hasPermission();
       if (!hasPerm) {
         setState(() => _recorderReady = false);
         return;
@@ -746,6 +1206,23 @@ class _Step2PersonsAndIncidentState extends State<_Step2PersonsAndIncident> {
     } catch (_) {
       setState(() => _recorderReady = false);
     }
+  }
+
+  void _showUrgencyHelp(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(16),
+        child: ListView(
+          children: const [
+            _HelpTile(title: 'Risque critique', body: 'Menaces de mort récentes, blessures graves, arme impliquée.'),
+            _HelpTile(title: 'Risque élevé', body: 'Viol, enfants en danger, victime isolée sans soutien.'),
+            _HelpTile(title: 'Risque modéré', body: 'Violence répétée/chronique, dépendance économique, auteur ayant accès au domicile.'),
+            _HelpTile(title: 'Risque faible', body: 'Situation non urgente mais préoccupante.'),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _initPlayer() async {
@@ -804,7 +1281,7 @@ class _Step2PersonsAndIncidentState extends State<_Step2PersonsAndIncident> {
   Future<void> _stopRecording({bool save = true}) async {
     if (!_recorderReady) return;
     try {
-  final path = await _recorder.stop();
+      final path = await _recorder.stop();
       _timer?.cancel();
       setState(() => _isRecording = false);
       if (save && path != null && mounted) {
@@ -880,7 +1357,7 @@ class _Step2PersonsAndIncidentState extends State<_Step2PersonsAndIncident> {
                     ? 'Enregistrement en cours…'
                     : (hasAudio
                         ? 'Un message audio est enregistré'
-                        : 'Voulez-vous enregistrer une description audio ?'),
+                        : 'Ou enregistrer la description sous forme de message audio ?'),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -911,290 +1388,6 @@ class _Step2PersonsAndIncidentState extends State<_Step2PersonsAndIncident> {
           ),
         ],
       ],
-    );
-  }
-
-  Future<void> _onSendMyLocation() async {
-    try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        setState(() {
-          _gpsSuccess = false;
-          _gpsErrorMessage = 'Service de localisation désactivé. Veuillez l’activer dans les réglages.';
-        });
-        return;
-      }
-
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          setState(() {
-            _gpsSuccess = false;
-            _gpsErrorMessage = 'Permission de localisation refusée.';
-          });
-          return; // user denied
-        }
-      }
-      if (permission == LocationPermission.deniedForever) {
-        setState(() {
-          _gpsSuccess = false;
-          _gpsErrorMessage = 'Permission refusée définitivement. Autorisez la localisation dans les réglages du système.';
-        });
-        return; // cannot request
-      }
-
-      Position? pos;
-      try {
-        pos = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.best,
-          timeLimit: const Duration(seconds: 10),
-        );
-      } catch (_) {
-        // Fallback to last known position
-        pos = await Geolocator.getLastKnownPosition();
-      }
-      if (pos == null) {
-        setState(() {
-          _gpsSuccess = false;
-          _gpsErrorMessage = 'Impossible d’obtenir la position (délai dépassé ou aucune position connue).';
-        });
-        return;
-      }
-      if (!mounted) return;
-      final d = widget.data.copyWith(latitude: pos.latitude, longitude: pos.longitude);
-      widget.onChanged(d);
-      setState(() {
-        _gpsSuccess = true;
-        _gpsErrorMessage = null;
-      });
-    } catch (_) {
-      setState(() {
-        _gpsSuccess = false;
-        _gpsErrorMessage = 'Une erreur est survenue lors de la récupération de la position.';
-      });
-    }
-  }
-}
-
-// ------------------- Step 3 -------------------
-class _Step3Needs extends StatelessWidget {
-  final ReportFormData data;
-  final ValueChanged<ReportFormData> onChanged;
-  const _Step3Needs({required this.data, required this.onChanged});
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Étape 3 : Besoins exprimés',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
-          Text(
-            data.reporterRole == ReporterRole.victim
-                ? 'Quels types d’aide souhaitez-vous recevoir ?'
-                : 'Quels types d’aide pensez-vous que la victime a besoin de recevoir ?',
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: NeedType.values.map((n) {
-              final selected = data.needs.contains(n);
-              return _PillOption(
-                label: _nLabel(n),
-                selected: selected,
-                onTap: () {
-                  final set = {...data.needs};
-                  selected ? set.remove(n) : set.add(n);
-                  onChanged(data.copyWith(needs: set));
-                },
-                multi: true,
-              );
-            }).toList(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  static String _nLabel(NeedType n) => switch (n) {
-        NeedType.psychological => 'Écoute et soutien psychologique',
-        NeedType.medical => 'Soins médicaux',
-        NeedType.legal => 'Assistance juridique',
-        NeedType.shelter => 'Hébergement d’urgence',
-        NeedType.economic => 'Aide économique ou alimentaire',
-        NeedType.policeProtection => 'Protection policière',
-        NeedType.other => 'Autre',
-      };
-}
-
-// ------------------- Step 4 -------------------
-class _Step4EvidenceAndContact extends StatefulWidget {
-  final ReportFormData data;
-  final ValueChanged<ReportFormData> onChanged;
-  const _Step4EvidenceAndContact({required this.data, required this.onChanged});
-  @override
-  State<_Step4EvidenceAndContact> createState() => _Step4EvidenceAndContactState();
-}
-
-class _Step4EvidenceAndContactState extends State<_Step4EvidenceAndContact> {
-  final _phoneCtrl = TextEditingController();
-  final _codeCtrl = TextEditingController();
-  final ImagePicker _picker = ImagePicker();
-
-  @override
-  void initState() {
-    super.initState();
-    _phoneCtrl.text = widget.data.contactNumber ?? '';
-    _codeCtrl.text = widget.data.securityCode ?? '';
-  }
-
-  @override
-  void dispose() {
-    _phoneCtrl.dispose();
-    _codeCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final d = widget.data;
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Étape 4 : Preuves et contact sécurisé',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 12),
-          // 1) Numéro de contact
-          TextFormField(
-            controller: _phoneCtrl,
-            keyboardType: TextInputType.phone,
-            decoration: const InputDecoration(
-              labelText: 'Numéro de contact',
-              hintText: 'Ex: +243 99 123 45 67',
-            ),
-            onChanged: (v) => widget.onChanged(d.copyWith(contactNumber: v)),
-            validator: (v) => (v == null || v.trim().isEmpty) ? 'Requis' : null,
-          ),
-          const SizedBox(height: 12),
-          // 2) Mot de code de sécurité (optionnel)
-          Row(
-            children: [
-              const Text('Mot de code de sécurité', style: TextStyle(fontWeight: FontWeight.w600)),
-              const SizedBox(width: 8),
-              _optionalBadge(),
-            ],
-          ),
-          TextFormField(
-            controller: _codeCtrl,
-            onChanged: (v) => widget.onChanged(d.copyWith(securityCode: v.isEmpty ? null : v)),
-            decoration: const InputDecoration(hintText: 'Ex: Soleil'),
-          ),
-          const SizedBox(height: 12),
-          // 3) Préférences de contact (multi-sélection)
-          const Text('Préférences de contact (multi-sélection)'),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: ContactPref.values.map((c) {
-              final selected = d.contactPrefs.contains(c);
-              return _PillOption(
-                label: _cLabel(c),
-                selected: selected,
-                onTap: () {
-                  final set = {...d.contactPrefs};
-                  selected ? set.remove(c) : set.add(c);
-                  widget.onChanged(d.copyWith(contactPrefs: set));
-                },
-                multi: true,
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 12),
-          // Horaires préférés (lié aux préférences de contact)
-          const Text('Horaires préférés'),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: TimePref.values
-                .map((t) => _PillOption(
-                      label: _tLabel(t),
-                      selected: d.timePref == t,
-                      onTap: () => widget.onChanged(d.copyWith(timePref: t)),
-                    ))
-                .toList(),
-          ),
-          const SizedBox(height: 12),
-          // 4) Preuves (optionnelles)
-          Row(
-            children: [
-              const Text('Preuves', style: TextStyle(fontWeight: FontWeight.w600)),
-              const SizedBox(width: 8),
-              _optionalBadge(),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              OutlinedButton.icon(
-                onPressed: () async {
-                  await _showPhotoSourcePicker(context, d);
-                },
-                icon: const Icon(Icons.image_outlined),
-                label: Text('Photos (${d.photoPaths.length}/5)'),
-              ),
-              OutlinedButton.icon(
-                onPressed: () async {
-                  if (d.audioPath != null) return; // single audio max
-                  final res = await FilePicker.platform.pickFiles(type: FileType.audio, allowMultiple: false);
-                  if (res == null || res.files.isEmpty) return;
-                  final path = res.files.single.path ?? res.files.single.name;
-                  widget.onChanged(d.copyWith(audioPath: path));
-                },
-                icon: const Icon(Icons.mic_none),
-                label: Text(d.audioPath == null ? 'Importer un audio' : 'Audio attaché'),
-              ),
-            ],
-          ),
-          if (d.photoPaths.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            const Text('Photos sélectionnées'),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: d.photoPaths.asMap().entries.map((e) {
-                return _PhotoThumb(
-                  path: e.value,
-                  onRemove: () {
-                    final list = [...d.photoPaths];
-                    list.removeAt(e.key);
-                    widget.onChanged(d.copyWith(photoPaths: list));
-                  },
-                );
-              }).toList(),
-            ),
-          ],
-          if (d.audioPath != null) ...[
-            const SizedBox(height: 8),
-            const Text('Audio attaché'),
-            const SizedBox(height: 4),
-            _fileRow(_pathBaseName(d.audioPath!), onRemove: () => widget.onChanged(d.copyWith(audioPath: null))),
-          ],
-          const SizedBox(height: 8),
-          const Text(
-            '💡 Vous pouvez choisir de ne pas être contacté en sélectionnant “In-app” ou “Aucun”.',
-            style: TextStyle(color: Colors.grey),
-          ),
-        ],
-      ),
     );
   }
 
@@ -1266,10 +1459,10 @@ class _Step5Review extends StatelessWidget {
         const SizedBox(height: 8),
         const Text('Vérifiez les informations (vous pouvez revenir aux étapes précédentes).'),
         const SizedBox(height: 16),
-        _reviewTile('Signalement', _vOrNone(data.anonymous == true ? 'Anonyme' : 'Nominal')),
-        _reviewTile('Rôle', _vOrNone(_roleToText(data.reporterRole))),
-        _reviewTile('Urgence', _vOrNone(_urgToText(data.urgency))),
-        _reviewTile('Violences', data.violenceTypes.isEmpty ? _none() : data.violenceTypes.map(_violToText).join(', ')),
+  _reviewTile('Signalement', _vOrNone(data.anonymous == true ? 'Anonyme' : 'Nominal')),
+  _reviewTile('Rôle', _vOrNone(_roleToText(data.reporterRole))),
+  _reviewTile('Urgence', _vOrNone(_urgToText(data.urgency))),
+  _reviewTile('Violences', data.violenceTypes.isEmpty ? _none() : data.violenceTypes.map(_violToText).join(', ')),
         const Divider(),
         _reviewTile('Nom du déclarant', _vOrNone(data.reporterName)),
         _reviewTile('Nom de la victime', _vOrNone(data.victimName)),
@@ -1277,6 +1470,9 @@ class _Step5Review extends StatelessWidget {
         _reviewTile('Sexe', _vOrNone(_sexToText(data.victimSex))),
         _reviewTile('Date de l’incident', _vOrNone(_fmtDate(data.incidentDate))),
         _reviewTile('Adresse', _vOrNone(data.addressLine)),
+  _reviewTile('Province', _vOrNone(data.locationProvince)),
+  _reviewTile('Commune', _vOrNone(data.locationCommune)),
+  _reviewTile('Quartier', _vOrNone(data.locationQuartier)),
         _reviewTile(
           'Position GPS',
           (data.latitude != null && data.longitude != null)
@@ -1285,6 +1481,9 @@ class _Step5Review extends StatelessWidget {
         ),
         _reviewTile('Fréquence', _vOrNone(_freqToText(data.frequency))),
         _reviewTile('Relation', _vOrNone(_relToText(data.relation))),
+        _reviewTile('Sûr maintenant', _vOrNone(_boolToOuiNon(data.isSafeNow))),
+        _reviewTile('Enfants en danger', _vOrNone(_boolToOuiNon(data.childrenAtRisk))),
+        _reviewTile('Menaces de mort', _vOrNone(_boolToOuiNon(data.deathThreats))),
         _reviewTile('Description (texte)', _vOrNone(data.descriptionText)),
         _reviewTile('Message audio (description)', data.descriptionAudioPath != null ? 'Ajouté' : _none()),
         const Divider(),
@@ -1369,14 +1568,21 @@ class _Step5Review extends StatelessWidget {
         null => '—',
       };
   String _relToText(Relation? r) => switch (r) {
-        Relation.partner => 'Partenaire',
-        Relation.parent => 'Parent',
-        Relation.neighbor => 'Voisin',
+        Relation.familyMember => 'Membre de la famille',
+        Relation.employer => 'Employeur',
         Relation.colleague => 'Collègue',
-        Relation.unknown => 'Inconnu',
+        Relation.teacher => 'Enseignant',
+        Relation.authority => 'Autorité publique',
+        Relation.religiousLeader => 'Chef religieux',
+        Relation.neighbor => 'Voisin',
+        Relation.stranger => 'Inconnu',
+        Relation.partner => 'Partenaire intime',
+        Relation.parent => 'Parent',
+        Relation.unknown => 'Non précisé',
         Relation.other => 'Autre',
         null => '—',
       };
+  String _boolToOuiNon(bool? v) => v == null ? '—' : (v ? 'Oui' : 'Non');
   String _fmtDate(DateTime? d) => d == null
       ? '—'
       : '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
