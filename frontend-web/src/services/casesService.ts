@@ -19,6 +19,26 @@ function normalizeUrgency(v: any): UrgencyLevel {
   return 'moderate';
 }
 
+function formatElapsedTime(createdAt: string): string {
+  try {
+    const createdDate = new Date(createdAt);
+    const now = new Date();
+    const diffMs = now.getTime() - createdDate.getTime();
+
+    const totalMinutes = Math.floor(diffMs / (1000 * 60));
+    const days = Math.floor(totalMinutes / (60 * 24));
+    const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
+    const minutes = totalMinutes % 60;
+
+    // Format avec padding (ex: 02J 05Hrs 07Min)
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${pad(days)}J ${pad(hours)}Hrs ${pad(minutes)}Min`;
+  } catch {
+    return '00J 00Hrs 00Min';
+  }
+}
+
+
 function pick<T=any>(obj: any, keys: string[], fallback?: any): T | any {
   for (const k of keys) {
     const parts = k.split('.');
@@ -38,36 +58,56 @@ function pick<T=any>(obj: any, keys: string[], fallback?: any): T | any {
 
 function mapApiToCaseDetail(raw: any, fallbackId: string): CaseDetail {
   const r = raw?.data ?? raw?.report ?? raw?.case ?? raw ?? {};
+  // Payload (JSON )
+let payload = pick<any>(r, ['payload'], {});
+if (typeof payload === 'string') {
+  try {
+    payload = JSON.parse(payload);
+  } catch {
+    payload = {};
+  }
+}  
 
   const id = pick<string>(r, ['id', 'uuid', 'report_id'], fallbackId);
   const trackingNumber = pick<string>(r, ['report_number', 'tracking', 'trackingNumber', 'number', 'id'], String(fallbackId));
   const createdAtRaw = pick<any>(r, ['created_at', 'createdAt', 'created', 'date_created'], new Date().toISOString());
   const createdAt = typeof createdAtRaw === 'string' ? createdAtRaw : new Date(createdAtRaw).toISOString();
-
-  const urgency = normalizeUrgency(pick<any>(r, ['urgency', 'risk', 'risk_level', 'priority', 'autoUrgencyScore']));
+  const urgency = normalizeUrgency(pick<any>(r, ['urgency_level', 'risk', 'risk_level', 'priority', 'autoUrgencyScore']));
   const violenceType = (pick<string>(r, ['violence_type', 'violenceType', 'type', 'category'], 'other') || 'other') as CaseDetail['violenceType'];
+ const violenceTypes = pick<any>(r, ['violence_types', 'violenceTypes', 'types'], []);
+  
+
+
 
   // Victim info
   const victim = {
     ageRange: pick<string>(r, ['victim_age_range', 'victim.age_range', 'victim.ageRange']),
     gender: pick<string>(r, ['victim_gender', 'victim.gender']) as any,
-    province: pick<string>(r, ['victim_province', 'victim.province', 'province']),
-    commune: pick<string>(r, ['victim_commune', 'victim.commune', 'commune']),
-    quartier: pick<string>(r, ['victim_quartier', 'victim.quartier', 'quartier']),
+    province: pick<string>(r, ['location_province', 'victim.province', 'province']),
+    commune: pick<string>(r, ['location_commune', 'victim.commune', 'commune']),
+    quartier: pick<string>(r, ['location_quartier', 'victim.quartier', 'quartier']),
+    is_anonymous: Boolean(pick<any>(r, ['is_anonymous', 'victim.is_anonymous', 'anonymous'])),
+    reporter_name: pick<string>(r, ['reporter_name', 'victim.reporter_name', 'reporterName']),
+    victim_name: pick<string>(r, ['victim_name', 'victim.name', 'name']),
+    contact_number: pick<string>(r, ['contact_number', 'victim.contact_number', 'contactNumber']),
+    address_line: pick<string>(r, ['address_line', 'victim.address_line', 'addressLine']),
+    victim_status: pick<string>(r, ['victim_status', 'victim.status', 'status']),
   };
 
   // Incident info
+  const narrationRaw = payload?.narrative ?? '';
   const incident = {
     place: pick<string>(r, ['incident_place', 'incident.place', 'place']) as any,
-    narrativeEncrypted: Boolean(pick<any>(r, ['narrative_encrypted', 'incident.narrative_encrypted'], false)),
-    narrativePreview: pick<string>(r, ['narrative_preview', 'incident.narrative_preview', 'description']),
+    narrativeEncrypted: pick<string>(r, ['narrative', 'incident.narrative_encrypted']),
+    narrativePreview: narrationRaw,
+    perpetrator_relationship: pick<string>(r, ['perpetrator_relationship', 'incident.perpetrator_relationship']) as any,
   };
 
   // Location
   const latitude = pick<number>(r, ['latitude', 'lat', 'location.latitude']);
   const longitude = pick<number>(r, ['longitude', 'lng', 'location.longitude']);
   const location = {
-    address: pick<string>(r, ['address', 'location.address']),
+    address: pick<string>(r, ['incident_location', 'location.address']),
     latitude: typeof latitude === 'string' ? parseFloat(latitude) : latitude,
     longitude: typeof longitude === 'string' ? parseFloat(longitude) : longitude,
   } as CaseDetail['location'];
@@ -78,36 +118,47 @@ function mapApiToCaseDetail(raw: any, fallbackId: string): CaseDetail {
 
   // Danger indicators
   const dangerIndicators = {
-    safeNow: Boolean(pick<any>(r, ['safe_now', 'danger.safe_now'])),
-    urgentCareNeeded: Boolean(pick<any>(r, ['urgent_care_needed', 'danger.urgent_care_needed'])),
+    safeNow: Boolean(pick<any>(r, ['is_safe_now', 'danger.safe_now'])),
+    urgentCareNeeded: Boolean(pick<any>(r, ['needs_urgent_medical', 'danger.urgent_care_needed'])),
     childrenAtRisk: Boolean(pick<any>(r, ['children_at_risk', 'danger.children_at_risk'])),
-    recentDeathThreats: Boolean(pick<any>(r, ['recent_death_threats', 'danger.recent_death_threats'])),
+    recentDeathThreats: Boolean(pick<any>(r, ['death_threats', 'danger.recent_death_threats'])),
     perpetratorHasHomeAccess: Boolean(pick<any>(r, ['perpetrator_has_home_access', 'danger.perpetrator_has_home_access'])),
   };
 
-  const needs = {
-    psycho: Boolean(pick<any>(r, ['needs_psycho', 'needs.psycho'])),
-    medical: Boolean(pick<any>(r, ['needs_medical', 'needs.medical'])),
-    legal: Boolean(pick<any>(r, ['needs_legal', 'needs.legal'])),
-    shelter: Boolean(pick<any>(r, ['needs_shelter', 'needs.shelter'])),
-    economic: Boolean(pick<any>(r, ['needs_economic', 'needs.economic'])),
-    police: Boolean(pick<any>(r, ['needs_police', 'needs.police'])),
+
+
+// Besoins (récupérés depuis payload.needs)
+const needsRaw = payload?.needs ?? {};
+const needs = {
+  psycho: Boolean(needsRaw?.psycho),
+  medical: Boolean(needsRaw?.medical),
+  legal: Boolean(needsRaw?.legal),
+  shelter: Boolean(needsRaw?.shelter),
+  economic: Boolean(needsRaw?.economic),
+  police: Boolean(needsRaw?.police),
   };
+
+  // Calcul du temps écoulé depuis la création jusqu'à maintenant (en minutes)
+  const elapsedFormatted = formatElapsedTime(createdAt);
+
+
 
   const detail: CaseDetail = {
     id: String(id),
     trackingNumber: String(trackingNumber),
     createdAt,
-    elapsedMinutes: pick<number>(r, ['elapsed_minutes', 'elapsed', 'elapsedMinutes']),
-    autoUrgencyScore: pick<number>(r, ['auto_urgency_score', 'autoUrgencyScore']),
+    elapsedMinutes: elapsedFormatted,
+    autoUrgencyScore: pick<number>(r, ['urgency_score', 'autoUrgencyScore']),
     urgency,
     violenceType: (violenceType || 'other') as CaseDetail['violenceType'],
+    violenceTypes: violenceTypes || {},
     victim,
     incident,
     location,
     attachments: { photos, audio },
     dangerIndicators,
     needs,
+
   };
 
   return detail;

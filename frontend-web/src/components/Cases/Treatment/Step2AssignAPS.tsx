@@ -9,6 +9,22 @@ interface Step2AssignAPSProps {
   onChange: (patch: Partial<AssignApsState>) => void;
 }
 
+const violenceLabels: Record<string, string> = {
+  rape: 'Viol',
+  sexual_assault: 'Agression sexuelle',
+  sexual_harassment: 'Harcèlement sexuel',
+  sexual_exploitation: 'Exploitation sexuelle',
+  forced_marriage: 'Mariage forcé / viol conjugal',
+  female_genital_mutilation: 'Mutilations génitales féminines',
+  incest: 'Inceste',
+  sextortion: 'Chantage sexuel / sextorsion',
+  sexual_slavery: 'Esclavage sexuel',
+  physical_assault: 'Violence physique',
+  psychological_violence: 'Violence psychologique',
+  denial_resources: 'Déni de ressources / économique',
+  other: 'Autre forme de violence',
+};
+
 export const Step2AssignAPS: React.FC<Step2AssignAPSProps> = ({ data, candidates, state, onChange }) => {
   return (
     <div className="space-y-6">
@@ -18,9 +34,48 @@ export const Step2AssignAPS: React.FC<Step2AssignAPSProps> = ({ data, candidates
           <FileText className="w-4 h-4" />
           <h3 className="text-sm font-semibold">Résumé du cas</h3>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
           <div><div className="text-gray-600">Numéro du cas</div><div className="font-medium">#{data.trackingNumber}</div></div>
-          <div><div className="text-gray-600">Type de violence</div><div className="capitalize">{String(data.violenceType).replace('_',' ')}</div></div>
+          <div><div className="text-gray-600">Type de violence</div>
+          
+                    {(() => {
+              // On normalise les types
+              let types: string[] = [];
+
+              if (Array.isArray(data.violenceTypes)) {
+                types = data.violenceTypes;
+              } else if (data.violenceTypes && typeof data.violenceTypes === 'object') {
+                types = Object.entries(data.violenceTypes)
+                  .filter(([_, val]) => val)
+                  .map(([key]) => key);
+              }
+
+              const translated = types.map(
+                (key) => violenceLabels[key] || key.replace(/_/g, ' ')
+              );
+
+              return (
+                <>
+                
+                  {/* Liste complète */}
+                  <div className="flex flex-wrap gap-2 text-xs">
+                    {translated.length > 0 ? (
+                      translated.map((label, i) => (
+                        <span
+                          key={i}
+                          className="px-2 py-1 rounded border border-success-200 bg-success-50 text-success-800"
+                        >
+                          {label}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-sm text-gray-500">Aucun autre type signalé</span>
+                    )}
+                  </div>
+                </>
+              );
+          })()}
+          </div>
           <div><div className="text-gray-600">Niveau d'urgence</div><div className="font-medium">{data.urgency}</div></div>
           <div><div className="text-gray-600">Localisation</div><div>{data.location?.address || '—'}</div></div>
         </div>

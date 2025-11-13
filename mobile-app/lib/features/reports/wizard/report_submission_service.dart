@@ -1,3 +1,4 @@
+
 import 'dart:math';
 import 'dart:io' show File;
 import 'package:http_parser/http_parser.dart' show MediaType;
@@ -94,22 +95,22 @@ Map<String, dynamic> _buildPayload(ReportFormData d) {
           ViolenceType.sexualHarassment => 'sexual_harassment',
           ViolenceType.sexualExploitation => 'sexual_exploitation',
           ViolenceType.forcedMarriage => 'forced_marriage',
-          ViolenceType.fgm => 'fgm',
+          ViolenceType.femaleGenitalMutilation => 'female_genital_mutilation',
           ViolenceType.incest => 'incest',
           ViolenceType.sextortion => 'sextortion',
           ViolenceType.physicalAssault => 'physical_assault',
           ViolenceType.denialResources => 'denial_resources',
           ViolenceType.psychologicalViolence => 'psychological_violence',
           ViolenceType.sexualSlavery => 'sexual_slavery',
-          // Backward-compatible generic categories
-          ViolenceType.physical => 'physical_assault',
-          ViolenceType.sexual => 'sexual_assault',
-          ViolenceType.psychological => 'psychological_violence',
-          ViolenceType.economic => 'denial_resources',
           ViolenceType.other => 'other',
+         
         };
+
+  
+
       }).toList();
 
+  // Backend expects enumerated ranges
   String? mapAge(AgeGroup? a) => switch (a) {
         AgeGroup.a0_5 => '0-5',
         AgeGroup.a6_12 => '6-12',
@@ -121,20 +122,22 @@ Map<String, dynamic> _buildPayload(ReportFormData d) {
         null => null,
       };
 
+  // Backend enum: 'female' | 'male' | ...
   String? mapSex(Sex? s) => switch (s) {
-        Sex.female => 'f',
-        Sex.male => 'm',
+        Sex.female => 'female',
+        Sex.male => 'male',
         null => null,
       };
 
+  // Backend enum: 'first_time' | 'repeated' | 'chronic'
   String? mapFreq(Frequency? f) => switch (f) {
-        Frequency.first => 'first',
+        Frequency.first => 'first_time',
         Frequency.repeated => 'repeated',
         Frequency.chronic => 'chronic',
         null => null,
       };
 
-  // Map perpetrator relationship to requested snake_case keys
+  // Map perpetrator relationship to backend enum values
   String? mapRelation(Relation? r) => switch (r) {
         Relation.familyMember => 'family_member',
         Relation.employer => 'employer',
@@ -160,7 +163,7 @@ Map<String, dynamic> _buildPayload(ReportFormData d) {
       ContactPref.call => 'call',
       ContactPref.whatsapp => 'whatsapp',
       ContactPref.sms => 'sms',
-      ContactPref.inApp => 'in-app',
+      ContactPref.inApp => 'in_app',
       ContactPref.none => 'none',
     };
   }
@@ -173,12 +176,13 @@ Map<String, dynamic> _buildPayload(ReportFormData d) {
         ContactPref.call => 'call',
         ContactPref.whatsapp => 'whatsapp',
         ContactPref.sms => 'sms',
-        ContactPref.inApp => 'in-app',
+        ContactPref.inApp => 'in_app',
         ContactPref.none => 'none',
       };
     }).toList();
   }
 
+  // Store as single value; backend column is JSON, but a single string is acceptable JSON; if needed, change to list below
   String? mapTimePref(TimePref? t) => switch (t) {
         TimePref.morning => 'morning',
         TimePref.afternoon => 'afternoon',
@@ -228,7 +232,8 @@ Map<String, dynamic> _buildPayload(ReportFormData d) {
     'urgency_level': mapUrgency(d.urgency),
     'victim_age_range': mapAge(d.victimAgeGroup),
     'victim_gender': mapSex(d.victimSex),
-    'incident_date': dateStr,
+  'incident_date': dateStr,
+  'incident_frequency': mapFreq(d.frequency),
     // Prefer the place selector if provided; otherwise keep address string for backward compatibility
     'incident_location': mapIncidentPlace(d.incidentPlace) ?? locationLine(),
     'address_line': d.addressLine?.trim(),
@@ -239,10 +244,11 @@ Map<String, dynamic> _buildPayload(ReportFormData d) {
     'perpetrator_relationship': mapRelation(d.relation),
     'preferred_contact_method': mapPrimaryContact(d.contactPrefs),
     'preferred_contact_methods': mapAllContacts(d.contactPrefs),
-    'preferred_contact_hours': mapTimePref(d.timePref),
+  // If backend strictly expects an array, wrap the single value
+  'preferred_contact_hours': d.timePref == null ? null : [mapTimePref(d.timePref)],
     'safety_code_word': d.securityCode,
   // Derived risk flags
-  'needs_urgent_medical': needsUrgentMedical(d.needs),
+  'needs_urgent_medical': d.needsUrgentMedical,
   'is_safe_now': d.isSafeNow,
   'children_at_risk': d.childrenAtRisk,
   'death_threats': d.deathThreats,

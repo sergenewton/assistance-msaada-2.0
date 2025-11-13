@@ -49,14 +49,19 @@ class PublicReportController extends Controller
         $normalizeViolence = function ($s) {
             if ($s === null) return null;
             $map = [
-                'rape' => 'sexual',
-                'sexual_assault' => 'sexual',
-                'sexual-violence' => 'sexual',
-                'fgm' => 'mgf',
-                'female_genital_mutilation' => 'mgf',
-                'physical_assault' => 'physical',
-                'psychological_abuse' => 'psychological',
+                'rape' => 'rape',
+                'sexual_assault' => 'sexual_assault',
+                'female_genital_mutilation' => 'female_genital_mutilation',
+                'physical_assault' => 'physical_assault',
                 'forced_marriage' => 'forced_marriage',
+                'sexual_harassment'=> 'sexual_harassment',
+                'sexual_exploitation'=> 'sexual_exploitation',
+                'incest'=> 'incest',
+                'sextortion'=> 'sextortion',
+                'denial_resources'=> 'denial_resources',
+                'psychological_violence'=> 'psychological_violence',
+                'sexual_slavery'=> 'sexual_slavery',
+
             ];
             $k = strtolower((string) $s);
             return $map[$k] ?? $k;
@@ -230,9 +235,7 @@ class PublicReportController extends Controller
                 ],
                 'preferred_contact_method' => $report->preferred_contact_method,
                 'preferred_contact_methods' => $report->preferred_contact_methods,
-                'preferred_contact_hours' => $report->preferred_contact_hours
-                    ? json_decode($report->preferred_contact_hours, true)
-                    : null,
+                json_decode($report->preferred_contact_hours ?: 'null', true)
             ],
         ]);
     }

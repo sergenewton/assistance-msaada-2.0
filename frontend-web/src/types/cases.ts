@@ -5,9 +5,10 @@ export interface CaseDetail {
   trackingNumber: string;
   createdAt: string;
   incidentDate?: string;
-  elapsedMinutes?: number;
+  elapsedMinutes?: string;
   autoUrgencyScore?: number; // 0-100
   urgency: UrgencyLevel;
+  violenceTypes: Record<string, any>;
   violenceType:
     | 'physical'
     | 'sexual'
@@ -18,7 +19,7 @@ export interface CaseDetail {
     | 'other';
   victim: {
     ageRange?: string;
-    gender?: 'f' | 'm' | 'other' | 'unknown';
+    gender?: 'female' | 'male' | 'other' | 'unknown';
     province?: string;
     commune?: string;
     quartier?: string;
@@ -27,6 +28,7 @@ export interface CaseDetail {
     place?: 'domicile' | 'travail' | 'espace_public' | 'autre';
     narrativeEncrypted?: boolean;
     narrativePreview?: string;
+    perpetrator_relationship?: 'family_member' | 'employer' | 'colleague' | 'teacher' | 'authority' | 'religious_leader' | 'neighbor' | 'stranger' | 'partner' | 'parent' | 'unknown' | 'other';
   };
   location?: {
     address?: string;

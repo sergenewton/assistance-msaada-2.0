@@ -8,13 +8,22 @@ return [
     'allowed_methods' => ['*'],
 
     // Explicitly allow local dev frontends
+    // For Flutter Web dev server the port is dynamic, so prefer origin patterns below
     'allowed_origins' => [
+        // Keep common fixed ports if used by other frontends
         'http://127.0.0.1:3000',
         'http://localhost:3000',
     ],
 
-    // You can also use patterns, e.g., for ports
-    'allowed_origins_patterns' => [],
+    // Allow any localhost/127.0.0.1 with any port (useful for Flutter/Vite dev servers)
+    'allowed_origins_patterns' => [
+        // HTTP dev origins
+        '#^http://localhost(?::\\d+)?$#',
+        '#^http://127\\.0\\.0\\.1(?::\\d+)?$#',
+        // HTTPS dev origins (in case Chrome serves over https locally)
+        '#^https://localhost(?::\\d+)?$#',
+        '#^https://127\\.0\\.0\\.1(?::\\d+)?$#',
+    ],
 
     // Allowed headers
     'allowed_headers' => ['*'],

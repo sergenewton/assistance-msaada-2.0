@@ -4,24 +4,18 @@ import 'package:flutter/foundation.dart';
 enum ReporterRole { victim, witness, concerned }
 enum Urgency { critical, high, moderate, low }
 enum ViolenceType {
-  // Detailed categories requested
   rape,
   sexualAssault,
   sexualHarassment,
   sexualExploitation,
   forcedMarriage,
-  fgm,
+  femaleGenitalMutilation,
   incest,
   sextortion,
   physicalAssault,
   denialResources,
   psychologicalViolence,
   sexualSlavery,
-  // Backward-compatible generic categories (mapped to detailed ones)
-  physical,
-  sexual,
-  psychological,
-  economic,
   other,
 }
 
@@ -32,13 +26,14 @@ const List<ViolenceType> kAllowedViolenceTypes = [
   ViolenceType.sexualHarassment,
   ViolenceType.sexualExploitation,
   ViolenceType.forcedMarriage,
-  ViolenceType.fgm,
+  ViolenceType.femaleGenitalMutilation,
   ViolenceType.incest,
   ViolenceType.sextortion,
   ViolenceType.physicalAssault,
   ViolenceType.denialResources,
   ViolenceType.psychologicalViolence,
   ViolenceType.sexualSlavery,
+  ViolenceType.other,
 ];
 
 enum AgeGroup { a0_5, a6_12, a13_17, a18_25, a26_35, a36_50, a50plus }
@@ -122,6 +117,7 @@ class ReportFormData {
   final bool? isSafeNow;
   final bool? childrenAtRisk;
   final bool? deathThreats;
+  final bool needsUrgentMedical;
 
   const ReportFormData({
     this.anonymous,
@@ -157,6 +153,7 @@ class ReportFormData {
     this.isSafeNow,
     this.childrenAtRisk,
     this.deathThreats,
+    this.needsUrgentMedical = false,
   });
 
   ReportFormData copyWith({
@@ -193,6 +190,8 @@ class ReportFormData {
     bool? isSafeNow,
     bool? childrenAtRisk,
     bool? deathThreats,
+    bool? needsUrgentMedical,
+    
   }) {
     return ReportFormData(
       anonymous: anonymous ?? this.anonymous,
@@ -229,6 +228,8 @@ class ReportFormData {
       isSafeNow: isSafeNow ?? this.isSafeNow,
       childrenAtRisk: childrenAtRisk ?? this.childrenAtRisk,
       deathThreats: deathThreats ?? this.deathThreats,
+      needsUrgentMedical: needsUrgentMedical ?? this.needsUrgentMedical,
+
     );
   }
 }
